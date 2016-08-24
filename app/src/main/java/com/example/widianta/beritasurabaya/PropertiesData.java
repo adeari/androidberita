@@ -5,9 +5,8 @@ package com.example.widianta.beritasurabaya;
  */
 public class PropertiesData {
 //    public final static String domain = "http://192.168.0.102/";
-
     public final static String domain = "http://sby.akses.top/";
-    public final static String ftpdomain = "ccc";
-    public final static String ftpusername = "cccc";
-    public final static String ftppassword = "ccc";
+    public final static String ftpdomain = "dsfdf";
+    public final static String ftpusername = "sdfdff";
+    public final static String ftppassword = "cxbfgfg";
 }
