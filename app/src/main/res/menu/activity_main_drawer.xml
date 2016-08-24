@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:title="Berita">
+        <menu>
+            <item
+                android:id="@+id/populermenu"
+                android:icon="@drawable/ic_local_florist_black_24dp"
+                android:title="Populer" />
+        </menu>
+    </item>
+
+    <item android:title="Setting">
+        <menu>
+            <item
+                android:id="@+id/beritaaddmenu"
+                android:icon="@drawable/ic_add_black_24dp"
+                android:title="Tambah Berita" />
+        </menu>
+    </item>
+
+</menu>
