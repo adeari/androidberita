@@ -26,6 +26,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.AbsListView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -78,6 +79,7 @@ public class MainActivity extends AppCompatActivity
     private ImageView beritaAddImageimageView;
     private File fileUpload;
     private SecureRandom secureRandom;
+    private String viewLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -128,12 +130,9 @@ public class MainActivity extends AppCompatActivity
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
 
-
-
         _arrayImageTexts = new ArrayList<ImageText>();
         _listImageText = new ListImageText(mainActivity, _arrayImageTexts);
         populerListView.setAdapter(_listImageText);
-
 
         ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_spinner_item, new String[] {"Umum", "Acara", "Pengaduan"});
@@ -183,7 +182,24 @@ public class MainActivity extends AppCompatActivity
         );
         new GetPopulerData().execute();
         closeLayoutsFirst();
-        setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
+        if (savedInstanceState == null) {
+            setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
+            viewLayout = "populer";
+        } else {
+            if (savedInstanceState.getString("viewlayout").equals("beritaadd")) {
+                setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
+                viewLayout = "beritaadd";
+            } else if (savedInstanceState.getString("viewlayout").equals("populer")) {
+                setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
+                viewLayout = "populer";
+            }
+        }
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState){
+        super.onSaveInstanceState(savedInstanceState);
+        savedInstanceState.putString("viewlayout", viewLayout);
     }
 
     private class postBerita extends AsyncTask<String, Void, String> {
@@ -214,9 +230,9 @@ public class MainActivity extends AppCompatActivity
                                 Bitmap bitmapImage = BitmapFactory.decodeFile(fileUpload.getAbsolutePath());
                                 int height = bitmapImage.getHeight();
                                 int width = bitmapImage.getWidth();
-                                if (width > 500) {
-                                    height = 500 * height / width;
-                                    width = 500;
+                                if (width > 277) {
+                                    height = 277 * height / width;
+                                    width = 277;
                                 }
                                 Bitmap bitmapReady = Bitmap.createScaledBitmap(bitmapImage, width, height, true);
                                 File sd = Environment.getExternalStorageDirectory();
@@ -405,6 +421,7 @@ public class MainActivity extends AppCompatActivity
                 for (int i = 0; i < jsonArray.length(); i++) {
                     JSONObject jsonObject = (JSONObject) jsonArray.get(i);
                     _arrayImageTexts.add(new ImageText(jsonObject.get("id").toString() ,jsonObject.get("judul").toString(), jsonObject.get("filename").toString()));
+
                 }
 
             }
@@ -434,15 +451,13 @@ public class MainActivity extends AppCompatActivity
 
         @Override
         protected void onPostExecute(String result) {
-            populerListView.deferNotifyDataSetChanged();
             populerProgressBar.setVisibility(View.GONE);
             populerListView.setVisibility(View.VISIBLE);
-
+            _listImageText.notifyDataSetChanged();
         }
 
         @Override
         protected void onPreExecute() {
-
             populerProgressBar.setVisibility(View.VISIBLE);
             populerListView.setVisibility(View.GONE);
         }
@@ -503,6 +518,7 @@ public class MainActivity extends AppCompatActivity
         if (id == R.id.populermenu) {
             closeLayouts();
             setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
+            viewLayout = "populer";
             new GetPopulerData().execute();
         } else if (id == R.id.beritaaddmenu) {
             closeLayouts();
@@ -514,6 +530,7 @@ public class MainActivity extends AppCompatActivity
             ((EditText) findViewById(R.id.beritaaddDeskripsi)).setText("");
             beritaAddImageimageView.setVisibility(View.GONE);
             setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
+            viewLayout = "beritaadd";
         }
 
         new Handler().postDelayed(new Runnable() {

@@ -22,12 +22,14 @@ import java.util.ArrayList;
 public class ListImageText extends ArrayAdapter<ImageText> {
     private Activity _context;
     private MainActivity _mainActivity;
+    private ImageLoader imageLoader;
 
     public ListImageText(MainActivity mainActivity, ArrayList<ImageText> imageText) {
         super((Activity) mainActivity, R.layout.listimagetext, imageText);
         // TODO Auto-generated constructor stub
         _context = (Activity) mainActivity;
         _mainActivity = mainActivity;
+        imageLoader=new ImageLoader(_mainActivity.getApplicationContext());
     }
 
     public View getView(int position, View view, ViewGroup parent) {
@@ -47,11 +49,10 @@ public class ListImageText extends ArrayAdapter<ImageText> {
         ImageText imageText = getItem(position);
         editText.setText(imageText.getId());
         txtTitle.setText(imageText.getJudul());
-        try {
-            imageView.setImageBitmap(BitmapFactory.decodeStream((InputStream)new URL(imageText.getImage()).getContent()));
-        } catch (IOException e) {
-            imageView.setImageResource(R.drawable.ic_local_florist_black_24dp);
-        }
+
+        imageLoader.DisplayImage(imageText.getImage(), imageView);
+
+
         return rowView;
     };
 }

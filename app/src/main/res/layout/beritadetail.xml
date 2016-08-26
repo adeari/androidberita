@@ -38,8 +38,7 @@
         android:id="@+id/imageberitadetail"
         android:layout_below="@+id/dateberitadetail"
         android:layout_alignParentStart="true"
-        android:layout_marginTop="25dp"
-        android:layout_marginBottom="30dp" />
+        android:layout_marginTop="25dp" />
 
     <TextView
         android:layout_width="match_parent"
@@ -48,7 +47,8 @@
         android:id="@+id/deskripsiberitadetail"
         android:layout_below="@+id/imageberitadetail"
         android:layout_alignParentStart="true"
-        android:textColor="#0c0707" />
+        android:textColor="#0c0707"
+        android:layout_marginTop="20dp" />
 
     <ProgressBar
         android:layout_width="wrap_content"
