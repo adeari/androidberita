@@ -37,6 +37,11 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.drawable.GlideDrawable;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.target.Target;
+
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.http.HttpResponse;
@@ -180,9 +185,10 @@ public class MainActivity extends AppCompatActivity
                }
            }
         );
-        new GetPopulerData().execute();
+
         closeLayoutsFirst();
         if (savedInstanceState == null) {
+            new GetPopulerData().execute();
             setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
             viewLayout = "populer";
         } else {
@@ -190,6 +196,7 @@ public class MainActivity extends AppCompatActivity
                 setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
                 viewLayout = "beritaadd";
             } else if (savedInstanceState.getString("viewlayout").equals("populer")) {
+                new GetPopulerData().execute();
                 setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
                 viewLayout = "populer";
             }
@@ -416,6 +423,7 @@ public class MainActivity extends AppCompatActivity
 
             JSONArray jsonArray = new JSONArray(resultStream);
 
+            _listImageText.clearList();
             _arrayImageTexts.clear();
             if (jsonArray.length() > 0) {
                 for (int i = 0; i < jsonArray.length(); i++) {
@@ -471,12 +479,10 @@ public class MainActivity extends AppCompatActivity
     public void onBackPressed() {
 
         if (drawer.isDrawerOpen(GravityCompat.START)) {
-            new Handler().postDelayed(new Runnable() {
-                public void run() {
-                    drawer.closeDrawer(GravityCompat.START);
-                }
-            }, 0);
-
+            drawer.closeDrawer(GravityCompat.START);
+        } else if (findViewById(R.id.beritadetail).getVisibility() == View.VISIBLE) {
+                closeLayouts();
+                setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
         } else {
             super.onBackPressed();
         }
@@ -532,12 +538,7 @@ public class MainActivity extends AppCompatActivity
             setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
             viewLayout = "beritaadd";
         }
-
-        new Handler().postDelayed(new Runnable() {
-            public void run() {
-                drawer.closeDrawer(GravityCompat.START);
-            }
-        }, 0);
+        drawer.closeDrawer(GravityCompat.START);
         return true;
     }
 
@@ -621,8 +622,24 @@ public class MainActivity extends AppCompatActivity
                 if (jsonObject.get("filename").toString().length() > 0) {
                     imageView.setImageBitmap(BitmapFactory.decodeStream((InputStream)new URL(jsonObject.get("filename").toString()).getContent()));
                     imageView.setVisibility(View.VISIBLE);
+                    Glide.with(imageView.getContext())
+                            .load(jsonObject.get("filename").toString())
+                            .listener(new RequestListener<String, GlideDrawable>() {
+                                @Override
+                                public boolean onException(Exception e, String model, Target<GlideDrawable> target, boolean isFirstResource) {
+                                    return false;
+                                }
+
+                                @Override
+                                public boolean onResourceReady(GlideDrawable resource, String model, Target<GlideDrawable> target, boolean isFromMemoryCache, boolean isFirstResource) {
+                                    beritaDetailProgressBar.setVisibility(View.GONE);
+                                    return false;
+                                }
+                            })
+                            .into(imageView);
                 } else {
                     imageView.setVisibility(View.GONE);
+                    beritaDetailProgressBar.setVisibility(View.GONE);
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -631,7 +648,7 @@ public class MainActivity extends AppCompatActivity
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            beritaDetailProgressBar.setVisibility(View.GONE);
+
         }
 
         @Override
@@ -664,7 +681,9 @@ public class MainActivity extends AppCompatActivity
                 setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
                 return false;
             }
+            System.exit(0);
         }
-        return super.onKeyDown(keyCode, event);
+        return true;
     }
+
 }
