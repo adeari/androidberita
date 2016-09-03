@@ -94,9 +94,6 @@ public class ListImageText extends ArrayAdapter<ImageText> {
                         }
                     })
                     .into(imageView);
-        } else {
-            listItemTextProggressBar.setVisibility(View.GONE);
-            imageView.setVisibility(View.VISIBLE);
         }
         return rowView;
     };
