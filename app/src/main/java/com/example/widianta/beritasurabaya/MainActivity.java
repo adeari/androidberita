@@ -1,6 +1,7 @@
 package com.example.widianta.beritasurabaya;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -36,6 +37,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.disklrucache.DiskLruCache;
 import com.bumptech.glide.load.resource.drawable.GlideDrawable;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
@@ -83,6 +85,11 @@ public class MainActivity extends AppCompatActivity
     private File fileUpload;
     private SecureRandom secureRandom;
     private String viewLayout;
+    private MenuItem loginMenu;
+    private MenuItem logoutMenu;
+
+    private SharedPreferences sharedPreferences;
+    private SharedPreferences.Editor editor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -111,6 +118,16 @@ public class MainActivity extends AppCompatActivity
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
+
+        Menu menu = navigationView.getMenu();
+        for (int menuItemIndex = 0; menuItemIndex < menu.size(); menuItemIndex++) {
+            MenuItem menuItem= menu.getItem(menuItemIndex);
+            if(menuItem.getItemId() == R.id.loginmenu){
+                loginMenu = menuItem;
+            } else if(menuItem.getItemId() == R.id.logoutmenu){
+                logoutMenu = menuItem;
+            }
+        }
 
         populerListView =(ListView) findViewById(R.id.listPopuler);
 
@@ -184,6 +201,49 @@ public class MainActivity extends AppCompatActivity
            }
         );
 
+        Button daftarbutton = (Button) findViewById(R.id.daftarbutton);
+        daftarbutton.setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        closeLayouts();
+                        setViewLayout((View) findViewById(R.id.userregister), View.VISIBLE);
+                        findViewById(R.id.daftarprogressbar).setVisibility(View.GONE);
+                        viewLayout = "userregister";
+                    }
+                }
+        );
+        Button daftarsimpanbutton = (Button) findViewById(R.id.daftarsimpanbutton);
+        daftarsimpanbutton.setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        new registeruser().execute();
+                    }
+                }
+        );
+
+        ((Button) findViewById(R.id.loginbutton)).setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        new loginuser().execute();
+                    }
+                }
+        );
+
+        sharedPreferences = getApplicationContext().getSharedPreferences("MyPref", 0); // 0 - for private mode
+        editor = sharedPreferences.edit();
+
+
+        if (sharedPreferences.getString("userid", "").isEmpty()) {
+            loginMenu.setVisible(true);
+            logoutMenu.setVisible(false);
+        } else {
+            loginMenu.setVisible(false);
+            logoutMenu.setVisible(true);
+        }
+
         closeLayoutsFirst();
         if (savedInstanceState == null) {
             new GetPopulerData().execute();
@@ -197,6 +257,15 @@ public class MainActivity extends AppCompatActivity
                 new GetPopulerData().execute();
                 setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
                 viewLayout = "populer";
+            } else if (savedInstanceState.getString("viewlayout").equals("userlogin")) {
+                setViewLayout((View) findViewById(R.id.userlogin), View.VISIBLE);
+                viewLayout = "userlogin";
+            } else if (savedInstanceState.getString("viewlayout").equals("beritadetail")) {
+                setViewLayout((View) findViewById(R.id.beritadetail), View.VISIBLE);
+                viewLayout = "beritadetail";
+            } else if (savedInstanceState.getString("viewlayout").equals("userregister")) {
+                setViewLayout((View) findViewById(R.id.userregister), View.VISIBLE);
+                viewLayout = "userregister";
             }
         }
     }
@@ -473,14 +542,169 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    private class registeruser extends AsyncTask<String, Void, String> {
+        private String usernamenik;
+        private String password;
+        private String email;
+        @Override
+        protected String doInBackground(String... params) {
+            HttpClient httpclient = new DefaultHttpClient();
+            HttpPost httpPost = new HttpPost(PropertiesData.domain.concat("android/mendaftar"));
+            List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+            nameValuePairs.add(new BasicNameValuePair("usernamenik", usernamenik));
+            nameValuePairs.add(new BasicNameValuePair("password", password));
+            nameValuePairs.add(new BasicNameValuePair("email", email));
+            try {
+                httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+                httpclient.execute(httpPost);
+            } catch (UnsupportedEncodingException e) {
+                Log.e("Unsupported", e.getMessage());
+            } catch (ClientProtocolException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                Log.e("IOException", e.getMessage());
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            findViewById(R.id.daftarprogressbar).setVisibility(View.GONE);
+            Toast.makeText(MainActivity.this, "User Tersimpan",
+                    Toast.LENGTH_SHORT).show();
+            setViewLayout((View) findViewById(R.id.userregister), View.GONE);
+            setViewLayout((View) findViewById(R.id.userlogin), View.VISIBLE);
+            viewLayout = "userlogin";
+        }
+
+        @Override
+        protected void onPreExecute() {
+            email = ((EditText) findViewById(R.id.daftaremail)).getText().toString();
+            usernamenik = ((EditText) findViewById(R.id.daftarusernamenik)).getText().toString();
+            password = ((EditText) findViewById(R.id.daftarpassword)).getText().toString();
+            findViewById(R.id.daftarprogressbar).setVisibility(View.VISIBLE);
+        }
+
+        @Override
+        protected void onProgressUpdate(Void... values) {
+        }
+    }
+    private class loginuser extends AsyncTask<String, Void, String> {
+        private String usernamenik;
+        private String password;
+        private JSONObject jsonObject;
+        @Override
+        protected String doInBackground(String... params) {
+            HttpClient httpclient = new DefaultHttpClient();
+            HttpPost httpPost = new HttpPost(PropertiesData.domain.concat("android/ceklogin"));
+            List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+            nameValuePairs.add(new BasicNameValuePair("usernamenik", usernamenik));
+            nameValuePairs.add(new BasicNameValuePair("password", password));
+            try {
+                httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+                HttpResponse response = httpclient.execute(httpPost);
+                String resultPostHTml = "";
+                BufferedReader rd = null;
+                String body = "";
+                try {
+                    rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+                    while ((body = rd.readLine()) != null) {
+                        resultPostHTml = resultPostHTml.concat(body);
+                    }
+                    if (resultPostHTml != null) {
+                        jsonObject = new JSONObject(resultPostHTml.toString());
+                    } else {
+                        resultPostHTml = "";
+                    }
+                } catch (IOException e) {
+                    Log.e("IOex1", e.getMessage());
+                } catch (JSONException e) {
+                    Log.e("jsonE1", e.getMessage());
+                } finally {
+                    if (rd != null) {
+                        try {
+                            rd.close();
+                        } catch (IOException e) {
+                            Log.e("IOex", e.getMessage());
+                        }
+                    }
+                }
+            } catch (UnsupportedEncodingException e) {
+                Log.e("Unsupported", e.getMessage());
+            } catch (ClientProtocolException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                Log.e("IOException", e.getMessage());
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            findViewById(R.id.loginprogressbar).setVisibility(View.GONE);
+            try {
+                if (jsonObject != null && jsonObject.getInt("success") == 1) {
+                    setViewLayout((View) findViewById(R.id.userlogin), View.GONE);
+                    setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
+                    viewLayout = "populer";
+
+                    editor.putString("userid", jsonObject.getString("userid"));
+                    editor.commit();
+
+                    loginMenu.setVisible(false);
+                    logoutMenu.setVisible(true);
+                } else {
+                    Toast.makeText(MainActivity.this, "Username / Password salah",
+                            Toast.LENGTH_SHORT).show();
+                }
+            } catch (JSONException e) {
+                Log.e("jsonE", e.getMessage());
+            }
+        }
+
+        @Override
+        protected void onPreExecute() {
+            usernamenik = ((EditText) findViewById(R.id.loginusernamenik)).getText().toString();
+            password = ((EditText) findViewById(R.id.loginpassword)).getText().toString();
+            findViewById(R.id.loginprogressbar).setVisibility(View.VISIBLE);
+        }
+
+        @Override
+        protected void onProgressUpdate(Void... values) {
+        }
+    }
+//debug post html
+    private void viewhtmlPost(HttpResponse response) {
+        BufferedReader rd = null;
+        String body = "";
+        try {
+            rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+            while ((body = rd.readLine()) != null)
+            {
+                Log.i("HttpResponse", body);
+            }
+        } catch (IOException e) {
+            Log.e("IOex", e.getMessage());
+        } finally {
+            if (rd != null) {
+                try {
+                    rd.close();
+                } catch (IOException e) {
+                    Log.e("IOex", e.getMessage());
+                }
+            }
+        }
+    }
+
     @Override
     public void onBackPressed() {
 
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
-        } else if (findViewById(R.id.beritadetail).getVisibility() == View.VISIBLE) {
+        } else if (viewLayout.equalsIgnoreCase("beritadetail")) {
                 closeLayouts();
                 setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
+                viewLayout = "populer";
         } else {
             super.onBackPressed();
         }
@@ -535,6 +759,19 @@ public class MainActivity extends AppCompatActivity
             beritaAddImageimageView.setVisibility(View.GONE);
             setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
             viewLayout = "beritaadd";
+        } else if (id == R.id.loginmenu) {
+            ((EditText) findViewById(R.id.loginusernamenik)).setText("");
+            ((EditText) findViewById(R.id.loginpassword)).setText("");
+
+            closeLayouts();
+            setViewLayout((View) findViewById(R.id.userlogin), View.VISIBLE);
+            findViewById(R.id.loginprogressbar).setVisibility(View.GONE);
+            viewLayout = "userlogin";
+        } else if (id == R.id.logoutmenu) {
+            editor.clear();
+            editor.commit();
+            loginMenu.setVisible(true);
+            logoutMenu.setVisible(false);
         }
         drawer.closeDrawer(GravityCompat.START);
         return true;
@@ -567,12 +804,16 @@ public class MainActivity extends AppCompatActivity
         setViewLayout((View) findViewById(R.id.populer), View.GONE);
         setViewLayout((View) findViewById(R.id.beritadetail), View.GONE);
         setViewLayout((View) findViewById(R.id.beritaadd), View.GONE);
+        setViewLayout((View) findViewById(R.id.userregister), View.GONE);
+        setViewLayout((View) findViewById(R.id.userlogin), View.GONE);
     }
 
     public void closeLayoutsFirst() {
         findViewById(R.id.populer).setVisibility(View.GONE);
         findViewById(R.id.beritadetail).setVisibility(View.GONE);
         findViewById(R.id.beritaadd).setVisibility(View.GONE);
+        findViewById(R.id.userregister).setVisibility(View.GONE);
+        findViewById(R.id.userlogin).setVisibility(View.GONE);
     }
 
     private class GetBeritaDetail extends AsyncTask<String, Void, String> {
@@ -657,6 +898,7 @@ public class MainActivity extends AppCompatActivity
             ((ImageView) findViewById(R.id.imageberitadetail)).setVisibility(View.GONE);
             closeLayouts();
             setViewLayout((View) findViewById(R.id.beritadetail), View.VISIBLE);
+            viewLayout = "beritadetail";
             beritaDetailProgressBar.setVisibility(View.VISIBLE);
         }
 

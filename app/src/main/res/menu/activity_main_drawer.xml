@@ -1,21 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:title="Berita">
-        <menu>
-            <item
-                android:id="@+id/populermenu"
-                android:icon="@drawable/ic_local_florist_black_24dp"
-                android:title="Populer" />
-        </menu>
-    </item>
-
-    <item android:title="Setting">
-        <menu>
-            <item
-                android:id="@+id/beritaaddmenu"
-                android:icon="@drawable/ic_add_black_24dp"
-                android:title="Tambah Berita" />
-        </menu>
-    </item>
-
+    <item></item>
+    <item android:title="Login" android:id="@+id/loginmenu" android:icon="@drawable/ic_alarm_on_green_24dp"></item>
+    <item android:title="Logout" android:id="@+id/logoutmenu" android:icon="@drawable/ic_alarm_off_red_24dp"></item>
+    <group  android:id="@+id/menu_bottom" android:checkableBehavior="none">
+        <item android:title="Populer" android:id="@+id/populermenu" android:icon="@drawable/ic_local_florist_black_24dp"></item>
+    </group>
+    <item android:title="Tambah Berita" android:id="@+id/beritaaddmenu" android:icon="@drawable/ic_add_black_24dp"></item>
 </menu>
