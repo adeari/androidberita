@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:padding="0dp"
+    android:layout_margin="0dp"
+    android:orientation="vertical">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="33dp"
+        android:visibility="visible"
+        android:layout_marginBottom="4dp">
+
+        <Button
+            style="?android:attr/buttonStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ralat"
+            android:id="@+id/beritasayaralat"
+            android:background="#9ef573"
+            android:paddingLeft="7dp"
+            android:paddingRight="7dp" />
+
+        <Button
+            style="?android:attr/buttonStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Hapus"
+            android:id="@+id/bertiasayahapus"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentEnd="true"
+            android:background="#ef4343"
+            android:paddingLeft="7dp"
+            android:paddingRight="7dp" />
+    </RelativeLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/border_ui"
+        android:orientation="horizontal" >
+
+
+
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/listItemTextProggressBar"
+            android:layout_gravity="center_vertical"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/icon"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:padding="1dp"
+            android:src="@drawable/ic_local_florist_black_24dp" />
+
+        <LinearLayout android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/item"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="Medium Text"
+                android:layout_marginLeft="10dp"
+                android:layout_marginTop="5dp"
+                android:padding="2dp"/>
+        </LinearLayout>
+
+        <EditText
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:inputType="number"
+            android:ems="10"
+            android:id="@+id/idberita"
+            android:layout_weight="1"/>
+    </LinearLayout>
+</LinearLayout>

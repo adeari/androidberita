@@ -78,18 +78,22 @@ public class MainActivity extends AppCompatActivity
     private ListView populerListView;
     private DrawerLayout drawer;
     private ListImageText _listImageText;
+    private ListImageTextRalat _listImageTextRalat;
     private GetPopulerData getPopulerData;
     private ProgressBar beritaAddProgressbar;
     private ProgressBar beritaDetailProgressBar;
     private ImageView beritaAddImageimageView;
     private File fileUpload;
     private SecureRandom secureRandom;
-    private String viewLayout;
-    private MenuItem loginMenu;
-    private MenuItem logoutMenu;
+
+    private List<MenuItem> loginMenus;
+    private List<MenuItem> logoutMenus;
 
     private SharedPreferences sharedPreferences;
     private SharedPreferences.Editor editor;
+
+    private String viewLayout;
+    private String beritaShow;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,6 +101,7 @@ public class MainActivity extends AppCompatActivity
         secureRandom = new SecureRandom();
         mainActivity = this;
         setContentView(R.layout.activity_main);
+        beritaShow = "";
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -119,16 +124,17 @@ public class MainActivity extends AppCompatActivity
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
+        loginMenus = new ArrayList<MenuItem>();
+        logoutMenus = new ArrayList<MenuItem>();
         Menu menu = navigationView.getMenu();
         for (int menuItemIndex = 0; menuItemIndex < menu.size(); menuItemIndex++) {
             MenuItem menuItem= menu.getItem(menuItemIndex);
-            if(menuItem.getItemId() == R.id.loginmenu){
-                loginMenu = menuItem;
-            } else if(menuItem.getItemId() == R.id.logoutmenu){
-                logoutMenu = menuItem;
+            if(menuItem.getGroupId() == R.id.logingroupmenu){
+                loginMenus.add(menuItem);
+            } else if(menuItem.getGroupId() == R.id.logoutgroupmenu){
+                logoutMenus.add(menuItem);
             }
         }
-
         populerListView =(ListView) findViewById(R.id.listPopuler);
 
         populerProgressBar = (ProgressBar) findViewById(R.id.progressBarPopuler);
@@ -152,7 +158,7 @@ public class MainActivity extends AppCompatActivity
 
         _arrayImageTexts = new ArrayList<ImageText>();
         _listImageText = new ListImageText(mainActivity, _arrayImageTexts);
-        populerListView.setAdapter(_listImageText);
+        _listImageTextRalat = new ListImageTextRalat(mainActivity, _arrayImageTexts);
 
         ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_spinner_item, new String[] {"Umum", "Acara", "Pengaduan"});
@@ -194,8 +200,7 @@ public class MainActivity extends AppCompatActivity
                        Toast.makeText(MainActivity.this, "Tulis Deskripsi Berita",
                                Toast.LENGTH_SHORT).show();
                    } else {
-                       postBerita getFileNameForUpload = new postBerita();
-                       getFileNameForUpload.execute();
+                       new PostBerita().execute();
                    }
                }
            }
@@ -209,7 +214,6 @@ public class MainActivity extends AppCompatActivity
                         closeLayouts();
                         setViewLayout((View) findViewById(R.id.userregister), View.VISIBLE);
                         findViewById(R.id.daftarprogressbar).setVisibility(View.GONE);
-                        viewLayout = "userregister";
                     }
                 }
         );
@@ -235,38 +239,43 @@ public class MainActivity extends AppCompatActivity
         sharedPreferences = getApplicationContext().getSharedPreferences("MyPref", 0); // 0 - for private mode
         editor = sharedPreferences.edit();
 
-
-        if (sharedPreferences.getString("userid", "").isEmpty()) {
-            loginMenu.setVisible(true);
-            logoutMenu.setVisible(false);
+        if (sharedPreferences.getString("usernamenik", "").isEmpty()) {
+            setLoginMenu(true);
+            setLogoutMenu(false);
         } else {
-            loginMenu.setVisible(false);
-            logoutMenu.setVisible(true);
+            setLoginMenu(false);
+            setLogoutMenu(true);
         }
 
         closeLayoutsFirst();
         if (savedInstanceState == null) {
             new GetPopulerData().execute();
             setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
-            viewLayout = "populer";
         } else {
             if (savedInstanceState.getString("viewlayout").equals("beritaadd")) {
                 setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
-                viewLayout = "beritaadd";
             } else if (savedInstanceState.getString("viewlayout").equals("populer")) {
+                beritaShow = savedInstanceState.getString("beritaShow");
                 new GetPopulerData().execute();
                 setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
-                viewLayout = "populer";
             } else if (savedInstanceState.getString("viewlayout").equals("userlogin")) {
                 setViewLayout((View) findViewById(R.id.userlogin), View.VISIBLE);
-                viewLayout = "userlogin";
             } else if (savedInstanceState.getString("viewlayout").equals("beritadetail")) {
                 setViewLayout((View) findViewById(R.id.beritadetail), View.VISIBLE);
-                viewLayout = "beritadetail";
             } else if (savedInstanceState.getString("viewlayout").equals("userregister")) {
                 setViewLayout((View) findViewById(R.id.userregister), View.VISIBLE);
-                viewLayout = "userregister";
             }
+        }
+    }
+
+    private void setLoginMenu(boolean isVisible) {
+        for (MenuItem menuItem: loginMenus) {
+            menuItem.setVisible(isVisible);
+        }
+    }
+    private void setLogoutMenu(boolean isVisible) {
+        for (MenuItem menuItem: logoutMenus) {
+            menuItem.setVisible(isVisible);
         }
     }
 
@@ -274,9 +283,10 @@ public class MainActivity extends AppCompatActivity
     public void onSaveInstanceState(Bundle savedInstanceState){
         super.onSaveInstanceState(savedInstanceState);
         savedInstanceState.putString("viewlayout", viewLayout);
+        savedInstanceState.putString("beritaShow", beritaShow);
     }
 
-    private class postBerita extends AsyncTask<String, Void, String> {
+    private class PostBerita extends AsyncTask<String, Void, String> {
         private String judulBerita;
         private String deskripsi;
         private String kategori;
@@ -295,7 +305,10 @@ public class MainActivity extends AppCompatActivity
                         FileInputStream in = null;
 
                         try {
-                            myurl = new URL(PropertiesData.domain.concat("android/getfilename-").concat(extension));
+
+                            myurl = new URL(PropertiesData.domain.concat("android/getfilename-").concat(extension)
+                                    .concat("?usernamenik=").concat(sharedPreferences.getString("usernamenik", ""))
+                                    .concat("&password=").concat(sharedPreferences.getString("password", "")));
                             URLConnection dc = myurl.openConnection();
                             inputStream = new BufferedReader(new InputStreamReader(
                                     dc.getInputStream()));
@@ -371,9 +384,13 @@ public class MainActivity extends AppCompatActivity
             nameValuePairs.add(new BasicNameValuePair("deskripsi", deskripsi));
             nameValuePairs.add(new BasicNameValuePair("kategori", kategori));
             nameValuePairs.add(new BasicNameValuePair("filename", fileNameForUpload));
+            nameValuePairs.add(new BasicNameValuePair("usernamenik", sharedPreferences.getString("usernamenik", "")));
+            nameValuePairs.add(new BasicNameValuePair("password", sharedPreferences.getString("password", "")));
+
             try {
                 httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
                 HttpResponse response = httpclient.execute(httpPost);
+                viewhtmlPost(response);
             } catch (UnsupportedEncodingException e) {
                 e.printStackTrace();
             } catch (ClientProtocolException e) {
@@ -390,6 +407,7 @@ public class MainActivity extends AppCompatActivity
             ((EditText) findViewById(R.id.beritaaddJudulBerita)).setText("");
             ((EditText) findViewById(R.id.beritaaddDeskripsi)).setText("");
             fileUpload = null;
+            beritaAddImageimageView.setVisibility(View.GONE);
             Toast.makeText(MainActivity.this, "Tersimpan",
                     Toast.LENGTH_LONG).show();
         }
@@ -482,7 +500,17 @@ public class MainActivity extends AppCompatActivity
         BufferedReader inputStream = null;
         URL myurl = null;
         try {
-            myurl = new URL(PropertiesData.domain.concat("android/populer"));
+            if (beritaShow.isEmpty() || beritaShow.equals("populer")) {
+                myurl = new URL(PropertiesData.domain.concat("android/populer"));
+            } else if (beritaShow.equals("terbaru")) {
+                myurl = new URL(PropertiesData.domain.concat("android/terbaru"));
+            } else if (beritaShow.equals("beritasaya")) {
+                myurl = new URL(PropertiesData.domain.concat("android/beritasaya").concat("?usernamenik=")
+                        .concat(sharedPreferences.getString("usernamenik", ""))
+                        .concat("&password=").concat(sharedPreferences.getString("password", "")));
+            } else {
+                myurl = new URL(PropertiesData.domain.concat("android/artikel-").concat(beritaShow));
+            }
             URLConnection dc = myurl.openConnection();
             inputStream = new BufferedReader(new InputStreamReader(
                     dc.getInputStream()));
@@ -491,6 +519,7 @@ public class MainActivity extends AppCompatActivity
             JSONArray jsonArray = new JSONArray(resultStream);
 
             _listImageText.clearList();
+            _listImageTextRalat.clearList();
             _arrayImageTexts.clear();
             if (jsonArray.length() > 0) {
                 for (int i = 0; i < jsonArray.length(); i++) {
@@ -528,7 +557,12 @@ public class MainActivity extends AppCompatActivity
         protected void onPostExecute(String result) {
             populerProgressBar.setVisibility(View.GONE);
             populerListView.setVisibility(View.VISIBLE);
-            _listImageText.notifyDataSetChanged();
+
+            if (beritaShow.equals("beritasaya")) {
+                populerListView.setAdapter(_listImageTextRalat);
+            } else {
+                populerListView.setAdapter(_listImageText);
+            }
         }
 
         @Override
@@ -574,7 +608,6 @@ public class MainActivity extends AppCompatActivity
                     Toast.LENGTH_SHORT).show();
             setViewLayout((View) findViewById(R.id.userregister), View.GONE);
             setViewLayout((View) findViewById(R.id.userlogin), View.VISIBLE);
-            viewLayout = "userlogin";
         }
 
         @Override
@@ -592,7 +625,7 @@ public class MainActivity extends AppCompatActivity
     private class loginuser extends AsyncTask<String, Void, String> {
         private String usernamenik;
         private String password;
-        private JSONObject jsonObject;
+        private String resultPostHTml;
         @Override
         protected String doInBackground(String... params) {
             HttpClient httpclient = new DefaultHttpClient();
@@ -603,23 +636,15 @@ public class MainActivity extends AppCompatActivity
             try {
                 httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
                 HttpResponse response = httpclient.execute(httpPost);
-                String resultPostHTml = "";
                 BufferedReader rd = null;
                 String body = "";
                 try {
                     rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
                     while ((body = rd.readLine()) != null) {
-                        resultPostHTml = resultPostHTml.concat(body);
-                    }
-                    if (resultPostHTml != null) {
-                        jsonObject = new JSONObject(resultPostHTml.toString());
-                    } else {
-                        resultPostHTml = "";
+                        resultPostHTml = body;
                     }
                 } catch (IOException e) {
                     Log.e("IOex1", e.getMessage());
-                } catch (JSONException e) {
-                    Log.e("jsonE1", e.getMessage());
                 } finally {
                     if (rd != null) {
                         try {
@@ -642,23 +667,19 @@ public class MainActivity extends AppCompatActivity
         @Override
         protected void onPostExecute(String result) {
             findViewById(R.id.loginprogressbar).setVisibility(View.GONE);
-            try {
-                if (jsonObject != null && jsonObject.getInt("success") == 1) {
-                    setViewLayout((View) findViewById(R.id.userlogin), View.GONE);
-                    setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
-                    viewLayout = "populer";
+            if (resultPostHTml.equals("1")) {
+                setViewLayout((View) findViewById(R.id.userlogin), View.GONE);
+                setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
 
-                    editor.putString("userid", jsonObject.getString("userid"));
-                    editor.commit();
+                editor.putString("usernamenik", usernamenik);
+                editor.putString("password", password);
+                editor.commit();
 
-                    loginMenu.setVisible(false);
-                    logoutMenu.setVisible(true);
-                } else {
-                    Toast.makeText(MainActivity.this, "Username / Password salah",
-                            Toast.LENGTH_SHORT).show();
-                }
-            } catch (JSONException e) {
-                Log.e("jsonE", e.getMessage());
+                setLoginMenu(false);
+                setLogoutMenu(true);
+            } else {
+                Toast.makeText(MainActivity.this, "Username / Password salah",
+                        Toast.LENGTH_SHORT).show();
             }
         }
 
@@ -698,13 +719,11 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onBackPressed() {
-
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
         } else if (viewLayout.equalsIgnoreCase("beritadetail")) {
                 closeLayouts();
                 setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
-                viewLayout = "populer";
         } else {
             super.onBackPressed();
         }
@@ -737,6 +756,7 @@ public class MainActivity extends AppCompatActivity
         super.onCreateSupportNavigateUpTaskStack(builder);
     }
 
+    //menunya
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
@@ -744,10 +764,7 @@ public class MainActivity extends AppCompatActivity
         int id = item.getItemId();
 
         if (id == R.id.populermenu) {
-            closeLayouts();
-            setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
-            viewLayout = "populer";
-            new GetPopulerData().execute();
+            showPopulerBeritaList("populer");
         } else if (id == R.id.beritaaddmenu) {
             closeLayouts();
             beritaAddProgressbar.setVisibility(View.GONE);
@@ -758,7 +775,6 @@ public class MainActivity extends AppCompatActivity
             ((EditText) findViewById(R.id.beritaaddDeskripsi)).setText("");
             beritaAddImageimageView.setVisibility(View.GONE);
             setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
-            viewLayout = "beritaadd";
         } else if (id == R.id.loginmenu) {
             ((EditText) findViewById(R.id.loginusernamenik)).setText("");
             ((EditText) findViewById(R.id.loginpassword)).setText("");
@@ -766,15 +782,31 @@ public class MainActivity extends AppCompatActivity
             closeLayouts();
             setViewLayout((View) findViewById(R.id.userlogin), View.VISIBLE);
             findViewById(R.id.loginprogressbar).setVisibility(View.GONE);
-            viewLayout = "userlogin";
         } else if (id == R.id.logoutmenu) {
             editor.clear();
             editor.commit();
-            loginMenu.setVisible(true);
-            logoutMenu.setVisible(false);
+            setLoginMenu(true);
+            setLogoutMenu(false);
+        } else if (id == R.id.terbarumenu) {
+            showPopulerBeritaList("terbaru");
+        } else if (id == R.id.umummenu) {
+            showPopulerBeritaList("umum");
+        } else if (id == R.id.acaramenu) {
+            showPopulerBeritaList("acara");
+        } else if (id == R.id.pengaduanmenu) {
+            showPopulerBeritaList("pengaduan");
+        } else if (id == R.id.beritasayamenu) {
+            showPopulerBeritaList("beritasaya");
         }
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    private void showPopulerBeritaList(String pilihan) {
+        beritaShow = pilihan;
+        closeLayouts();
+        setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
+        new GetPopulerData().execute();
     }
 
     private String getFileName(Uri uri) {
@@ -797,6 +829,21 @@ public class MainActivity extends AppCompatActivity
             }
         } else if (status == View.VISIBLE) {
             view.setVisibility(View.VISIBLE);
+        }
+
+        if (status == View.VISIBLE) {
+            switch (view.getId()) {
+                case R.id.populer: viewLayout = "populer";
+                    break;
+                case R.id.beritadetail: viewLayout = "beritadetail";
+                    break;
+                case R.id.beritaadd: viewLayout = "beritadetail";
+                    break;
+                case R.id.userregister: viewLayout = "beritadetail";
+                    break;
+                case R.id.userlogin: viewLayout = "userlogin";
+                    break;
+            }
         }
     }
 
@@ -898,7 +945,6 @@ public class MainActivity extends AppCompatActivity
             ((ImageView) findViewById(R.id.imageberitadetail)).setVisibility(View.GONE);
             closeLayouts();
             setViewLayout((View) findViewById(R.id.beritadetail), View.VISIBLE);
-            viewLayout = "beritadetail";
             beritaDetailProgressBar.setVisibility(View.VISIBLE);
         }
 
@@ -907,23 +953,53 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    public void  openBeritaDetailAsync(String id) {
-        GetBeritaDetail getBeritaDetail = new GetBeritaDetail(id);
-        getBeritaDetail.execute();
-    }
-
-    public boolean onKeyDown(int keyCode, KeyEvent event)
-    {
-        if ((keyCode == KeyEvent.KEYCODE_BACK))
-        {
-            if (findViewById(R.id.beritadetail).getVisibility() == View.VISIBLE) {
-                closeLayouts();
-                setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
-                return false;
-            }
-            System.exit(0);
+    private class DeleteBerita extends AsyncTask<String, Void, String> {
+        private String _id;
+        public DeleteBerita(String id) {
+            super();
+            _id = id;
         }
-        return true;
+        @Override
+        protected String doInBackground(String... params) {
+            HttpClient httpclient = new DefaultHttpClient();
+            HttpPost httpPost = new HttpPost(PropertiesData.domain.concat("android/berita-deleted"));
+            List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+            nameValuePairs.add(new BasicNameValuePair("usernamenik", sharedPreferences.getString("usernamenik", "")));
+            nameValuePairs.add(new BasicNameValuePair("password", sharedPreferences.getString("password", "")));
+            nameValuePairs.add(new BasicNameValuePair("id", _id));
+            try {
+                httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+                HttpResponse response = httpclient.execute(httpPost);
+            } catch (UnsupportedEncodingException e) {
+                Log.e("Unsupported", e.getMessage());
+            } catch (ClientProtocolException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                Log.e("IOException", e.getMessage());
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            showPopulerBeritaList("beritasaya");
+            Toast.makeText(MainActivity.this, "Berita Terhapus",
+                    Toast.LENGTH_SHORT).show();
+        }
+
+        @Override
+        protected void onPreExecute() {
+        }
+
+        @Override
+        protected void onProgressUpdate(Void... values) {
+        }
     }
 
+    public void  openBeritaDetailAsync(String id) {
+        new GetBeritaDetail(id).execute();
+    }
+    public void deleteBerita(String id) {
+         new DeleteBerita(id).execute();
+    }
 }

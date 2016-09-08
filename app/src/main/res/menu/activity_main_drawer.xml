@@ -1,10 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item></item>
-    <item android:title="Login" android:id="@+id/loginmenu" android:icon="@drawable/ic_alarm_on_green_24dp"></item>
-    <item android:title="Logout" android:id="@+id/logoutmenu" android:icon="@drawable/ic_alarm_off_red_24dp"></item>
-    <group  android:id="@+id/menu_bottom" android:checkableBehavior="none">
-        <item android:title="Populer" android:id="@+id/populermenu" android:icon="@drawable/ic_local_florist_black_24dp"></item>
+    <group  android:id="@+id/logingroupmenu" android:checkableBehavior="none">
+        <item></item>
+        <item android:title="Login" android:id="@+id/loginmenu" android:icon="@drawable/ic_alarm_on_green_24dp"></item>
     </group>
-    <item android:title="Tambah Berita" android:id="@+id/beritaaddmenu" android:icon="@drawable/ic_add_black_24dp"></item>
+    <group  android:id="@+id/logoutgroupmenu" android:checkableBehavior="none">
+        <item android:title="Berita Saya" android:id="@+id/beritasayamenu" android:icon="@drawable/ic_insert_drive_file_black_24dp"></item>
+        <item android:title="Tambah Berita" android:id="@+id/beritaaddmenu" android:icon="@drawable/ic_add_black_24dp"></item>
+        <item android:title="Logout" android:id="@+id/logoutmenu" android:icon="@drawable/ic_alarm_off_red_24dp"></item>
+    </group>
+    <group  android:id="@+id/beritagroup" android:checkableBehavior="none">
+        <item android:title="Populer" android:id="@+id/populermenu" android:icon="@drawable/ic_local_florist_black_24dp"></item>
+        <item android:title="Terbaru" android:id="@+id/terbarumenu" android:icon="@drawable/ic_local_florist_black_24dp"></item>
+    </group>
+    <group  android:id="@+id/artikelgroup" android:checkableBehavior="none">
+        <item android:title="Umum" android:id="@+id/umummenu" android:icon="@drawable/ic_clear_all_black_24dp"></item>
+        <item android:title="Acara" android:id="@+id/acaramenu" android:icon="@drawable/ic_clear_all_black_24dp"></item>
+        <item android:title="Pengaduan" android:id="@+id/pengaduanmenu" android:icon="@drawable/ic_clear_all_black_24dp"></item>
+    </group>
+
 </menu>

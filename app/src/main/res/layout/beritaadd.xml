@@ -40,14 +40,16 @@
                     android:layout_height="wrap_content"
                     android:text="Galleri"
                     android:id="@+id/beritaaddGaleriButton"
-                    android:layout_alignParentStart="true" />
+                    android:layout_alignParentStart="true"
+                    android:background="#6c62f0" />
 
                 <Button
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="kamera"
                     android:id="@+id/beritaaddKameraButton"
-                    android:layout_alignParentEnd="true" />
+                    android:layout_alignParentEnd="true"
+                    android:background="#6624a8" />
 
             </RelativeLayout>
 
