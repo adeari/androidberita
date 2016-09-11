@@ -16,7 +16,6 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.TaskStackBuilder;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -37,7 +36,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.disklrucache.DiskLruCache;
 import com.bumptech.glide.load.resource.drawable.GlideDrawable;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
@@ -94,6 +92,7 @@ public class MainActivity extends AppCompatActivity
 
     private String viewLayout;
     private String beritaShow;
+    private String imageAction;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,6 +101,7 @@ public class MainActivity extends AppCompatActivity
         mainActivity = this;
         setContentView(R.layout.activity_main);
         beritaShow = "";
+        imageAction = "";
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -184,6 +184,15 @@ public class MainActivity extends AppCompatActivity
                     public void onClick(View v) {
                         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                         startActivityForResult(intent, 7777);
+                    }
+                }
+        );
+
+        ((Button) findViewById(R.id.beritaaddKameraButton)).setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        imageAction = "hapus";
                     }
                 }
         );
@@ -290,6 +299,7 @@ public class MainActivity extends AppCompatActivity
         private String judulBerita;
         private String deskripsi;
         private String kategori;
+        private String idBerita;
         @Override
         protected String doInBackground(String... params) {
             String fileNameForUpload = "";
@@ -383,6 +393,8 @@ public class MainActivity extends AppCompatActivity
             nameValuePairs.add(new BasicNameValuePair("judul", judulBerita));
             nameValuePairs.add(new BasicNameValuePair("deskripsi", deskripsi));
             nameValuePairs.add(new BasicNameValuePair("kategori", kategori));
+            nameValuePairs.add(new BasicNameValuePair("idberita", idBerita));
+            nameValuePairs.add(new BasicNameValuePair("imageaction", imageAction));
             nameValuePairs.add(new BasicNameValuePair("filename", fileNameForUpload));
             nameValuePairs.add(new BasicNameValuePair("usernamenik", sharedPreferences.getString("usernamenik", "")));
             nameValuePairs.add(new BasicNameValuePair("password", sharedPreferences.getString("password", "")));
@@ -404,10 +416,12 @@ public class MainActivity extends AppCompatActivity
         @Override
         protected void onPostExecute(String result) {
             beritaAddProgressbar.setVisibility(View.GONE);
-            ((EditText) findViewById(R.id.beritaaddJudulBerita)).setText("");
-            ((EditText) findViewById(R.id.beritaaddDeskripsi)).setText("");
+            if (idBerita.length() == 0) {
+                ((EditText) findViewById(R.id.beritaaddJudulBerita)).setText("");
+                ((EditText) findViewById(R.id.beritaaddDeskripsi)).setText("");
+                beritaAddImageimageView.setVisibility(View.GONE);
+            }
             fileUpload = null;
-            beritaAddImageimageView.setVisibility(View.GONE);
             Toast.makeText(MainActivity.this, "Tersimpan",
                     Toast.LENGTH_LONG).show();
         }
@@ -418,6 +432,7 @@ public class MainActivity extends AppCompatActivity
             judulBerita = ((EditText) findViewById(R.id.beritaaddJudulBerita)).getText().toString();
             deskripsi = ((EditText) findViewById(R.id.beritaaddDeskripsi)).getText().toString();
             kategori = ((Spinner) findViewById(R.id.beritaaddSpinner)).getSelectedItem().toString();
+            idBerita = ((TextView) findViewById(R.id.idberitaedit)).getText().toString();
         }
 
         @Override
@@ -435,6 +450,9 @@ public class MainActivity extends AppCompatActivity
                     beritaAddImageimageView.setImageURI(selectedImage);
                     beritaAddImageimageView.setVisibility(View.VISIBLE);
                     fileUpload = new File(getFileName(selectedImage));
+                    if (((TextView) findViewById(R.id.idberitaedit)).getText().length() >0) {
+                        imageAction = "ubah";
+                    }
                 }
                 break;
             case 1:
@@ -443,6 +461,9 @@ public class MainActivity extends AppCompatActivity
                     beritaAddImageimageView.setImageURI(selectedImage);
                     beritaAddImageimageView.setVisibility(View.VISIBLE);
                     fileUpload = new File(getFileName(selectedImage));
+                    if (((TextView) findViewById(R.id.idberitaedit)).getText().length() >0) {
+                        imageAction = "ubah";
+                    }
                 }
                 break;
             case 7777:
@@ -458,8 +479,9 @@ public class MainActivity extends AppCompatActivity
                         out = new FileOutputStream(fileUpload);
                         selectedImage.compress(Bitmap.CompressFormat.JPEG, 90, out);
                         out.flush();
-                        out.close();
-                        out = null;
+                        if (((TextView) findViewById(R.id.idberitaedit)).getText().length() >0) {
+                            imageAction = "ubah";
+                        }
                     } catch (IOException e) {
                         e.printStackTrace();
                     } finally {
@@ -770,10 +792,12 @@ public class MainActivity extends AppCompatActivity
             beritaAddProgressbar.setVisibility(View.GONE);
             beritaAddImageimageView.setVisibility(View.GONE);
             fileUpload = null;
+            imageAction = "";
 
             ((EditText) findViewById(R.id.beritaaddJudulBerita)).setText("");
             ((EditText) findViewById(R.id.beritaaddDeskripsi)).setText("");
-            beritaAddImageimageView.setVisibility(View.GONE);
+            ((TextView) findViewById(R.id.idberitaedit)).setText("");
+            ((Button) findViewById(R.id.beritaddhapusgambar)).setVisibility(View.GONE);
             setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
         } else if (id == R.id.loginmenu) {
             ((EditText) findViewById(R.id.loginusernamenik)).setText("");
@@ -1001,5 +1025,98 @@ public class MainActivity extends AppCompatActivity
     }
     public void deleteBerita(String id) {
          new DeleteBerita(id).execute();
+    }
+    public void prePareEditBerita(String selectedID) {
+        new Get1Berita(selectedID).execute();
+    }
+
+    private class Get1Berita extends AsyncTask<String, Void, String> {
+        private ImageText imageText;
+        private String _id;
+        public Get1Berita(String id) {
+            super();
+            _id = id;
+        }
+        @Override
+        protected String doInBackground(String... params) {
+            BufferedReader inputStream = null;
+            URL myurl = null;
+            try {
+                myurl = new URL(PropertiesData.domain.concat("android/beritadetail-").concat(_id));
+                URLConnection dc = myurl.openConnection();
+                inputStream = new BufferedReader(new InputStreamReader(
+                        dc.getInputStream()));
+                JSONObject jsonObject = new JSONObject(inputStream.readLine());
+                imageText = new ImageText(_id, jsonObject.get("judul").toString(), jsonObject.get("filename").toString()
+                        , jsonObject.get("deskripsi").toString(), jsonObject.get("kategori").toString());
+            } catch (MalformedURLException e) {
+                Log.e(e.getLocalizedMessage(), e.getMessage());
+            } catch (IOException e) {
+                Log.e(e.getLocalizedMessage(), e.getMessage());
+            } catch (JSONException e) {
+                Log.e(e.getLocalizedMessage(), e.getMessage());
+            } finally {
+                if (inputStream != null) {
+                    try {
+                        inputStream.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            ((EditText) findViewById(R.id.beritaaddJudulBerita)).setText(imageText.getJudul());
+            ((EditText) findViewById(R.id.beritaaddDeskripsi)).setText(imageText.getBerita());
+            ((TextView) findViewById(R.id.idberitaedit)).setText(imageText.getId());
+            Spinner spinner = (Spinner)findViewById(R.id.beritaaddSpinner);
+            int position = 0;
+            while (position < spinner.getAdapter().getCount()) {
+                if (spinner.getAdapter().getItem(position).toString().equalsIgnoreCase(imageText.getKategori())) {
+                    spinner.setSelection(position);
+                    break;
+                }
+                position++;
+            }
+
+            if (imageText.getImage() != null && imageText.getImage().length() > 0) {
+                beritaAddImageimageView.setVisibility(View.VISIBLE);
+                ((Button) findViewById(R.id.beritaddhapusgambar)).setVisibility(View.VISIBLE);
+                Glide.with(beritaAddImageimageView.getContext())
+                        .load(imageText.getImage())
+                        .listener(new RequestListener<String, GlideDrawable>() {
+                            @Override
+                            public boolean onException(Exception e, String model, Target<GlideDrawable> target, boolean isFirstResource) {
+                                return false;
+                            }
+
+                            @Override
+                            public boolean onResourceReady(GlideDrawable resource, String model, Target<GlideDrawable> target, boolean isFromMemoryCache, boolean isFirstResource) {
+                                beritaDetailProgressBar.setVisibility(View.GONE);
+                                return false;
+                            }
+                        })
+                        .into(beritaAddImageimageView);
+            }
+        }
+
+        @Override
+        protected void onPreExecute() {
+            closeLayouts();
+            imageAction = "";
+            beritaAddProgressbar.setVisibility(View.GONE);
+            beritaAddImageimageView.setVisibility(View.GONE);
+            ((Button) findViewById(R.id.beritaddhapusgambar)).setVisibility(View.GONE);
+            ((TextView) findViewById(R.id.idberitaedit)).setText("");
+            fileUpload = null;
+            setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
+        }
+
+        @Override
+        protected void onProgressUpdate(Void... values) {
+        }
     }
 }

@@ -51,6 +51,18 @@
                     android:layout_alignParentEnd="true"
                     android:background="#6624a8" />
 
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Hapus"
+                    android:id="@+id/beritaddhapusgambar"
+                    android:layout_alignParentBottom="true"
+                    android:layout_centerHorizontal="true"
+                    android:background="#f46f6f"
+                    android:paddingLeft="10dp"
+                    android:paddingRight="10dp" />
+
             </RelativeLayout>
 
             <TextView
@@ -120,5 +132,13 @@
                 android:layout_alignParentLeft="false"
                 android:layout_alignParentBottom="true"
                 android:layout_alignParentRight="false" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="New Text"
+                android:id="@+id/idberitaedit"
+                android:layout_below="@+id/beritaaddSimpan"
+                android:visibility="gone" />
         </RelativeLayout>
 </ScrollView>

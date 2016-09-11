@@ -84,6 +84,14 @@ public class ListImageTextRalat extends ArrayAdapter<ImageText> {
                         .setNegativeButton(android.R.string.no, null).show();
             }
         });
+        ((Button) rowView.findViewById(R.id.beritasayaralat)).setOnClickListener(new View.OnClickListener() {
+            public void onClick(View viewOnClick) {
+                RelativeLayout relativeLayout = (RelativeLayout) viewOnClick.getParent();
+                LinearLayout linearLayout = (LinearLayout) relativeLayout.getParent();
+                selectedID = ((EditText) linearLayout.findViewById(R.id.idberita)).getText().toString();
+                _mainActivity.prePareEditBerita(selectedID);
+            }
+        });
 
         TextView txtTitle = (TextView) rowView.findViewById(R.id.item);
         ImageView imageView = (ImageView) rowView.findViewById(R.id.icon);
