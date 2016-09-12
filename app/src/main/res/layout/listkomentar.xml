@@ -6,22 +6,65 @@
     <LinearLayout
         android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/layoutkomentar"
-        android:layout_marginBottom="10dp">
+        android:background="@drawable/border_ui"
+        android:layout_height="match_parent">
 
-        <ImageView
+        <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:id="@+id/imagekomentar"
-            android:layout_marginBottom="10dp" />
+            android:layout_height="20dp"
+            android:id="@+id/ralatlayout">
 
-        <TextView
+            <Button
+                style="?android:attr/buttonStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ralat"
+                android:background="#9ef573"
+                android:id="@+id/ralatkomentar"
+                android:paddingRight="5dp"
+                android:paddingLeft="5dp" />
+
+            <Button
+                style="?android:attr/buttonStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hapus"
+                android:background="#ef4343"
+                android:id="@+id/hapuskomentar"
+                android:layout_alignParentTop="true"
+                android:layout_alignParentEnd="true"
+                android:paddingLeft="5dp"
+                android:paddingRight="5dp" />
+        </RelativeLayout>
+
+        <LinearLayout
+            android:orientation="vertical"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="New Text"
-            android:layout_marginBottom="3dp"
-            android:id="@+id/komentar" />
-        <View style="@style/Divider"/>
+            android:id="@+id/layoutkomentar"
+            android:paddingLeft="5dp"
+            android:paddingRight="5dp">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="80dp"
+                android:id="@+id/imagekomentar"
+                android:layout_marginBottom="10dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/komentar" />
+        </LinearLayout>
     </LinearLayout>
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="13dp"
+        android:layout_weight="1"/>
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="New Text"
+        android:id="@+id/komentarid"
+        android:visibility="gone" />
 </LinearLayout>

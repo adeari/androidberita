@@ -1,5 +1,7 @@
 package com.example.widianta.beritasurabaya;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
@@ -103,6 +105,7 @@ public class MainActivity extends AppCompatActivity
     private String viewLayout;
     private String beritaShow;
     private String imageAction;
+    private String idKomentarDeleted;
 
 
 
@@ -263,7 +266,21 @@ public class MainActivity extends AppCompatActivity
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        new registeruser().execute();
+                        String passwordRegister = ((EditText) findViewById(R.id.daftarpassword)).getText().toString();
+                        String passwordreRegister = ((EditText) findViewById(R.id.daftarrepassword)).getText().toString();
+                        String usernamenik = ((EditText) findViewById(R.id.daftarusernamenik)).getText().toString();
+                        if (usernamenik.length() == 0) {
+                            Toast.makeText(MainActivity.this, "Tulis User Name / NIK",
+                                    Toast.LENGTH_SHORT).show();
+                        } else if (passwordRegister.length() == 0) {
+                            Toast.makeText(MainActivity.this, "Tulis Password",
+                                    Toast.LENGTH_SHORT).show();
+                        } else if (!passwordRegister.equals(passwordreRegister)) {
+                            Toast.makeText(MainActivity.this, "Password dan Re Password harus sama",
+                                    Toast.LENGTH_SHORT).show();
+                        } else {
+                            new registeruser().execute();
+                        }
                     }
                 }
         );
@@ -686,8 +703,10 @@ public class MainActivity extends AppCompatActivity
         private String usernamenik;
         private String password;
         private String email;
+        private String resultPostHTml;
         @Override
         protected String doInBackground(String... params) {
+            resultPostHTml = "";
             HttpClient httpclient = new DefaultHttpClient();
             HttpPost httpPost = new HttpPost(PropertiesData.domain.concat("android/mendaftar"));
             List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
@@ -696,7 +715,25 @@ public class MainActivity extends AppCompatActivity
             nameValuePairs.add(new BasicNameValuePair("email", email));
             try {
                 httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-                httpclient.execute(httpPost);
+                HttpResponse response = httpclient.execute(httpPost);
+                BufferedReader rd = null;
+                String body = "";
+                try {
+                    rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+                    while ((body = rd.readLine()) != null) {
+                        resultPostHTml = resultPostHTml.concat(body);
+                    }
+                } catch (IOException e) {
+                    Log.e("IOex1", e.getMessage());
+                } finally {
+                    if (rd != null) {
+                        try {
+                            rd.close();
+                        } catch (IOException e) {
+                            Log.e("IOex", e.getMessage());
+                        }
+                    }
+                }
             } catch (UnsupportedEncodingException e) {
                 Log.e("Unsupported", e.getMessage());
             } catch (ClientProtocolException e) {
@@ -709,11 +746,22 @@ public class MainActivity extends AppCompatActivity
 
         @Override
         protected void onPostExecute(String result) {
-            findViewById(R.id.daftarprogressbar).setVisibility(View.GONE);
-            Toast.makeText(MainActivity.this, "User Tersimpan",
-                    Toast.LENGTH_SHORT).show();
-            setViewLayout((View) findViewById(R.id.userregister), View.GONE);
-            setViewLayout((View) findViewById(R.id.userlogin), View.VISIBLE);
+            JSONObject jsonObject = null;
+            try {
+                jsonObject = new JSONObject(resultPostHTml);
+                if (jsonObject.getString("success").equals("1")) {
+                    Toast.makeText(MainActivity.this, "User Tersimpan",
+                            Toast.LENGTH_SHORT).show();
+                    setViewLayout((View) findViewById(R.id.userregister), View.GONE);
+                    setViewLayout((View) findViewById(R.id.userlogin), View.VISIBLE);
+                } else {
+                    Toast.makeText(MainActivity.this, jsonObject.getString("msg"),
+                            Toast.LENGTH_SHORT).show();
+                }
+                findViewById(R.id.daftarprogressbar).setVisibility(View.GONE);
+            } catch (JSONException e) {
+                Log.e("JSONE", e.getMessage());
+            }
         }
 
         @Override
@@ -988,20 +1036,22 @@ public class MainActivity extends AppCompatActivity
             BufferedReader inputStream = null;
             URL myurl = null;
             try {
-                myurl = new URL(PropertiesData.domain.concat("android/beritadetail-").concat(_id));
+                if (sharedPreferences.getString("usernamenik", "").isEmpty()) {
+                    myurl = new URL(PropertiesData.domain.concat("android/beritadetail-").concat(_id));
+                } else {
+                    myurl = new URL(PropertiesData.domain.concat("android/beritadetail-").concat(_id)
+                            .concat("?usernamenik=").concat(sharedPreferences.getString("usernamenik", ""))
+                            .concat("&password=").concat(sharedPreferences.getString("password", ""))
+                    );
+                }
+
                 URLConnection dc = myurl.openConnection();
                 inputStream = new BufferedReader(new InputStreamReader(
                         dc.getInputStream()));
                 jsonObject = new JSONObject(inputStream.readLine());
 
                 JSONArray jsonArray = jsonObject.getJSONArray("komentars");
-                komentarTexts = new ArrayList<KomentarText>();
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    JSONObject jsonObjectKomentar = jsonArray.getJSONObject(i);
-                    KomentarText komentarText = new KomentarText(jsonObjectKomentar.get("komentar").toString(),
-                            jsonObjectKomentar.get("gambar").toString());
-                    komentarTexts.add(komentarText);
-                }
+                komentarTexts = getKomentarTexts(jsonArray);
             } catch (MalformedURLException e) {
                 Log.e(e.getLocalizedMessage(), e.getMessage());
             } catch (IOException e) {
@@ -1050,39 +1100,7 @@ public class MainActivity extends AppCompatActivity
                     imageberitadetail.setVisibility(View.GONE);
                     beritaDetailProgressBar.setVisibility(View.GONE);
                 }
-
-                LinearLayout relativeLayout = (LinearLayout) findViewById(R.id.linerlayoutVerticalDAta);
-
-                relativeLayout.removeAllViews();
-                for (KomentarText komentarText : komentarTexts) {
-                    LayoutInflater inflater = mainActivity.getLayoutInflater();
-                    View rowView = inflater.inflate(R.layout.listkomentar, null, true);
-
-                    ((TextView) rowView.findViewById(R.id.komentar)).setText(komentarText.getKomentar());
-                    ImageView imageView = (ImageView) rowView.findViewById(R.id.imagekomentar);
-
-                    if (komentarText.getImage().length() > 0) {
-                        imageView.setVisibility(View.VISIBLE);
-                        Glide.with(imageView.getContext())
-                                .load(komentarText.getImage())
-                                .placeholder(R.drawable.ic_local_florist_black_24dp)
-                                .listener(new RequestListener<String, GlideDrawable>() {
-                                    @Override
-                                    public boolean onException(Exception e, String model, Target<GlideDrawable> target, boolean isFirstResource) {
-                                        return false;
-                                    }
-
-                                    @Override
-                                    public boolean onResourceReady(GlideDrawable resource, String model, Target<GlideDrawable> target, boolean isFromMemoryCache, boolean isFirstResource) {
-                                        return false;
-                                    }
-                                })
-                                .into(imageView);
-                    } else {
-                        imageView.setVisibility(View.GONE);
-                    }
-                    relativeLayout.addView(rowView);
-                }
+                setKomentar(komentarTexts);
             } catch (JSONException e) {
                 e.printStackTrace();
             } catch (MalformedURLException e) {
@@ -1090,9 +1108,8 @@ public class MainActivity extends AppCompatActivity
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            findViewById(R.id.bertiadetailaddkomentar).setVisibility(View.VISIBLE);
         }
-
-
 
         @Override
         protected void onPreExecute() {
@@ -1110,6 +1127,112 @@ public class MainActivity extends AppCompatActivity
             } else {
                 findViewById(R.id.bertiadetailaddkomentar).setVisibility(View.VISIBLE);
             }
+            findViewById(R.id.bertiadetailaddkomentar).setVisibility(View.GONE);
+        }
+
+        @Override
+        protected void onProgressUpdate(Void... values) {
+        }
+    }
+
+    private void setKomentar(ArrayList<KomentarText> komentarTexts) {
+        LinearLayout relativeLayout = (LinearLayout) findViewById(R.id.linerlayoutVerticalDAta);
+        relativeLayout.removeAllViews();
+        for (KomentarText komentarText : komentarTexts) {
+            LayoutInflater inflater = mainActivity.getLayoutInflater();
+            View rowView = inflater.inflate(R.layout.listkomentar, null, true);
+
+            ((TextView) rowView.findViewById(R.id.komentar)).setText(komentarText.getKomentar());
+            ImageView imageView = (ImageView) rowView.findViewById(R.id.imagekomentar);
+            ((TextView) rowView.findViewById(R.id.komentarid)).setText(komentarText.getId());
+
+            if (komentarText.getImage().length() > 0) {
+                imageView.setVisibility(View.VISIBLE);
+                Glide.with(imageView.getContext())
+                        .load(komentarText.getImage())
+                        .placeholder(R.drawable.ic_local_florist_black_24dp)
+                        .listener(new RequestListener<String, GlideDrawable>() {
+                            @Override
+                            public boolean onException(Exception e, String model, Target<GlideDrawable> target, boolean isFirstResource) {
+                                return false;
+                            }
+
+                            @Override
+                            public boolean onResourceReady(GlideDrawable resource, String model, Target<GlideDrawable> target, boolean isFromMemoryCache, boolean isFirstResource) {
+                                return false;
+                            }
+                        })
+                        .into(imageView);
+            } else {
+                imageView.setVisibility(View.GONE);
+            }
+            if (komentarText.getIsAccess().equals("1")) {
+                rowView.findViewById(R.id.ralatlayout).setVisibility(View.VISIBLE);
+                ((Button) rowView.findViewById(R.id.hapuskomentar)).setOnClickListener(
+                        new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                LinearLayout linearLayout = (LinearLayout) v.getParent().getParent();
+                                LinearLayout linearLayoutParent = (LinearLayout) v.getParent().getParent().getParent();
+                                idKomentarDeleted = ((TextView) linearLayoutParent.findViewById(R.id.komentarid)).getText().toString();
+                                new AlertDialog.Builder(mainActivity)
+                                        .setTitle("Yakin Akan Dihapus")
+                                        .setMessage("Apakah Komentar ".concat(((TextView) linearLayout.findViewById(R.id.komentar)).getText().toString()).concat(" akan dihapus ?"))
+                                        .setIcon(android.R.drawable.ic_dialog_alert)
+                                        .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+
+                                            public void onClick(DialogInterface dialog, int whichButton) {
+                                                new DeleteKomentar(idKomentarDeleted).execute();
+                                            }
+                                        })
+                                        .setNegativeButton(android.R.string.no, null).show();
+                            }
+                        }
+                );
+            } else {
+                rowView.findViewById(R.id.ralatlayout).setVisibility(View.GONE);
+            }
+            relativeLayout.addView(rowView);
+        }
+    }
+
+    private class DeleteKomentar extends AsyncTask<String, Void, String> {
+        private String id;
+        public DeleteKomentar(String idKomentar) {
+            super();
+            id = idKomentar;
+        }
+        @Override
+        protected String doInBackground(String... params) {
+            HttpClient httpclient = new DefaultHttpClient();
+            HttpPost httpPost = new HttpPost(PropertiesData.domain.concat("android/komentar-deleted"));
+            List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+            nameValuePairs.add(new BasicNameValuePair("usernamenik", sharedPreferences.getString("usernamenik", "")));
+            nameValuePairs.add(new BasicNameValuePair("password", sharedPreferences.getString("password", "")));
+            nameValuePairs.add(new BasicNameValuePair("idkomentar", id));
+            try {
+                httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+                viewhtmlPost(httpclient.execute(httpPost));
+            } catch (UnsupportedEncodingException e) {
+                Log.e("Unsupported", e.getMessage());
+            } catch (ClientProtocolException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                Log.e("IOException", e.getMessage());
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            new GetKomentar().execute();
+            Toast.makeText(MainActivity.this, "Komentar Terhapus",
+                    Toast.LENGTH_SHORT).show();
+        }
+
+        @Override
+        protected void onPreExecute() {
+            beritaDetailProgressBar.setVisibility(View.VISIBLE);
         }
 
         @Override
@@ -1118,31 +1241,28 @@ public class MainActivity extends AppCompatActivity
     }
 
     private class GetKomentar extends AsyncTask<String, Void, String> {
-        private JSONObject jsonObject;
+        private JSONArray jsonArray;
         private String _id;
         private ArrayList<KomentarText> komentarTexts;
-        public GetKomentar(String idBerita) {
-            super();
-            _id = idBerita;
-        }
+
         @Override
         protected String doInBackground(String... params) {
             BufferedReader inputStream = null;
             URL myurl = null;
             try {
-                myurl = new URL(PropertiesData.domain.concat("android/beritadetail-").concat(_id));
+                if (sharedPreferences.getString("usernamenik", "").isEmpty()) {
+                    myurl = new URL(PropertiesData.domain.concat("android/komentar-data-").concat(_id));
+                } else {
+                    myurl = new URL(PropertiesData.domain.concat("android/komentar-data-").concat(_id)
+                            .concat("?usernamenik=").concat(sharedPreferences.getString("usernamenik", ""))
+                            .concat("&password=").concat(sharedPreferences.getString("password", ""))
+                    );
+                }
                 URLConnection dc = myurl.openConnection();
                 inputStream = new BufferedReader(new InputStreamReader(
                         dc.getInputStream()));
-                jsonObject = new JSONObject(inputStream.readLine());
-
-                JSONArray jsonArray = jsonObject.getJSONArray("komentars");
-                komentarTexts = new ArrayList<KomentarText>();
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    JSONObject jsonObjectKomentar = jsonArray.getJSONObject(i);
-                    komentarTexts.add(new KomentarText(jsonObjectKomentar.get("komentar").toString(),
-                            jsonObjectKomentar.get("gambar").toString()));
-                }
+                jsonArray = new JSONArray(inputStream.readLine());
+                komentarTexts = getKomentarTexts(jsonArray);
             } catch (MalformedURLException e) {
                 Log.e(e.getLocalizedMessage(), e.getMessage());
             } catch (IOException e) {
@@ -1163,38 +1283,7 @@ public class MainActivity extends AppCompatActivity
 
         @Override
         protected void onPostExecute(String result) {
-            LinearLayout relativeLayout = (LinearLayout) findViewById(R.id.linerlayoutVerticalDAta);
-
-            relativeLayout.removeAllViews();
-            for (KomentarText komentarText : komentarTexts) {
-                LayoutInflater inflater = mainActivity.getLayoutInflater();
-                View rowView = inflater.inflate(R.layout.listkomentar, null, true);
-
-                ((TextView) rowView.findViewById(R.id.komentar)).setText(komentarText.getKomentar());
-                ImageView imageView = (ImageView) rowView.findViewById(R.id.imagekomentar);
-
-                if (komentarText.getImage().length() > 0) {
-                    imageView.setVisibility(View.VISIBLE);
-                    Glide.with(imageView.getContext())
-                            .load(komentarText.getImage())
-                            .placeholder(R.drawable.ic_local_florist_black_24dp)
-                            .listener(new RequestListener<String, GlideDrawable>() {
-                                @Override
-                                public boolean onException(Exception e, String model, Target<GlideDrawable> target, boolean isFirstResource) {
-                                    return false;
-                                }
-
-                                @Override
-                                public boolean onResourceReady(GlideDrawable resource, String model, Target<GlideDrawable> target, boolean isFromMemoryCache, boolean isFirstResource) {
-                                    return false;
-                                }
-                            })
-                            .into(imageView);
-                } else {
-                    imageView.setVisibility(View.GONE);
-                }
-                relativeLayout.addView(rowView);
-            }
+            setKomentar(komentarTexts);
             beritaDetailProgressBar.setVisibility(View.GONE);
             ((ScrollView) findViewById(R.id.beritadetail)).requestChildFocus(findViewById(R.id.beritadetaillastcomponent),
                     findViewById(R.id.beritadetaillastcomponent));
@@ -1203,11 +1292,30 @@ public class MainActivity extends AppCompatActivity
         @Override
         protected void onPreExecute() {
             beritaDetailProgressBar.setVisibility(View.VISIBLE);
+            _id = ((EditText) findViewById(R.id.beritadetailidberita)).getText().toString();
         }
 
         @Override
         protected void onProgressUpdate(Void... values) {
         }
+    }
+
+    private ArrayList<KomentarText> getKomentarTexts(JSONArray jsonArray) {
+        ArrayList<KomentarText> komentarTexts = new ArrayList<KomentarText>();
+        for (int i = 0; i < jsonArray.length(); i++) {
+            try {
+                JSONObject jsonObjectKomentar = jsonArray.getJSONObject(i);
+                komentarTexts.add(new KomentarText(jsonObjectKomentar.get("komentar").toString(),
+                        jsonObjectKomentar.get("gambar").toString(),
+                        jsonObjectKomentar.get("id").toString(),
+                        jsonObjectKomentar.get("useridinput").toString(),
+                        jsonObjectKomentar.get("idberita").toString(),
+                        jsonObjectKomentar.get("isaccess").toString()));
+            } catch (JSONException e) {
+                Log.e(e.getLocalizedMessage(), e.getMessage());
+            }
+        }
+        return komentarTexts;
     }
 
     private class DeleteBerita extends AsyncTask<String, Void, String> {
@@ -1473,7 +1581,7 @@ public class MainActivity extends AppCompatActivity
             findViewById(R.id.beritadetailkomentarform).setVisibility(View.GONE);
             findViewById(R.id.bertiadetailaddkomentar).setVisibility(View.VISIBLE);
             Toast.makeText(MainActivity.this, "Tersimpan", Toast.LENGTH_LONG).show();
-            new GetKomentar(idberita).execute();
+            new GetKomentar().execute();
         }
 
         @Override
