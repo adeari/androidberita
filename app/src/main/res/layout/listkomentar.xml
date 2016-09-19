@@ -11,13 +11,13 @@
 
         <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="20dp"
+            android:layout_height="wrap_content"
             android:id="@+id/ralatlayout">
 
             <Button
                 style="?android:attr/buttonStyleSmall"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="20dp"
                 android:text="Ralat"
                 android:background="#9ef573"
                 android:id="@+id/ralatkomentar"
@@ -27,7 +27,7 @@
             <Button
                 style="?android:attr/buttonStyleSmall"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="20dp"
                 android:text="Hapus"
                 android:background="#ef4343"
                 android:id="@+id/hapuskomentar"
@@ -55,8 +55,125 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/komentar" />
+
         </LinearLayout>
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/komentarformralat"
+            android:background="#e8f6f4"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="20dp">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:id="@+id/komentarralatimage"
+                android:visibility="gone" />
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/komentarbuttonsbarralat"
+                android:layout_below="@+id/komentarralatimage">
+
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="20dp"
+                    android:text="Galeri"
+                    android:background="#6c62f0"
+                    android:id="@+id/komentarralatgaleributton"
+                    android:paddingLeft="5dp"
+                    android:paddingRight="5dp" />
+
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="20dp"
+                    android:text="Kamera"
+                    android:id="@+id/komentarralatkamerabutton"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentEnd="true"
+                    android:background="#6624a8"
+                    android:paddingRight="5dp"
+                    android:paddingLeft="5dp" />
+
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="20dp"
+                    android:text="Hapus"
+                    android:id="@+id/komentarlayouthapusgambar"
+                    android:layout_alignParentTop="true"
+                    android:background="#f46f6f"
+                    android:layout_centerHorizontal="true" />
+
+            </RelativeLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Komentar"
+                android:id="@+id/textView6"
+                android:layout_below="@+id/komentarbuttonsbarralat" />
+
+            <EditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/komentaredittextralat"
+                android:layout_below="@+id/textView6" />
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/komentaredittextralat">
+
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="25dp"
+                    android:text="Simpan"
+                    android:id="@+id/komentarralatsimpan"
+                    android:paddingLeft="5dp"
+                    android:background="#9ef573"
+                    android:paddingRight="5dp"
+                    android:layout_marginStart="93dp"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentStart="true" />
+
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="25dp"
+                    android:text="Batal"
+                    android:id="@+id/komentarralatbatal"
+                    android:paddingLeft="5dp"
+                    android:paddingRight="5dp"
+                    android:background="#ef4343"
+                    android:layout_alignParentTop="true"
+                    android:layout_toEndOf="@+id/komentarralatsimpan"
+                    android:layout_marginStart="43dp" />
+            </RelativeLayout>
+
+            <ProgressBar
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/komentarralatprogressbar"
+                android:layout_alignTop="@+id/textView6"
+                android:layout_centerHorizontal="true" />
+
+        </RelativeLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/imagelinkkomentarralat"
+            android:visibility="gone" />
+
     </LinearLayout>
+
     <View
         android:layout_width="match_parent"
         android:layout_height="13dp"
@@ -64,7 +181,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="New Text"
         android:id="@+id/komentarid"
         android:visibility="gone" />
+
 </LinearLayout>

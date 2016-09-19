@@ -9,14 +9,14 @@
 
     <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="20dp"
+        android:layout_height="wrap_content"
         android:visibility="visible"
         android:layout_marginBottom="4dp">
 
         <Button
             style="?android:attr/buttonStyleSmall"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="20dp"
             android:text="Ralat"
             android:id="@+id/beritasayaralat"
             android:background="#9ef573"
@@ -26,7 +26,7 @@
         <Button
             style="?android:attr/buttonStyleSmall"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="20dp"
             android:text="Hapus"
             android:id="@+id/bertiasayahapus"
             android:layout_alignParentTop="true"

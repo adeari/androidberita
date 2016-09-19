@@ -4,9 +4,13 @@
         <item></item>
         <item android:title="Login" android:id="@+id/loginmenu" android:icon="@drawable/ic_alarm_on_green_24dp"></item>
     </group>
+    <item android:title="Menu Saya">
+        <menu>
+            <item android:title="Berita Saya" android:id="@+id/beritasayamenu" android:icon="@drawable/ic_insert_drive_file_black_24dp"></item>
+            <item android:title="Tambah Berita" android:id="@+id/beritaaddmenu" android:icon="@drawable/ic_add_black_24dp"></item>
+        </menu>
+    </item>
     <group  android:id="@+id/logoutgroupmenu" android:checkableBehavior="none">
-        <item android:title="Berita Saya" android:id="@+id/beritasayamenu" android:icon="@drawable/ic_insert_drive_file_black_24dp"></item>
-        <item android:title="Tambah Berita" android:id="@+id/beritaaddmenu" android:icon="@drawable/ic_add_black_24dp"></item>
         <item android:title="Logout" android:id="@+id/logoutmenu" android:icon="@drawable/ic_alarm_off_red_24dp"></item>
     </group>
     <group  android:id="@+id/beritagroup" android:checkableBehavior="none">

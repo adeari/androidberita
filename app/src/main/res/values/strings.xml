@@ -5,4 +5,42 @@
     <string name="navigation_drawer_close">Close navigation drawer</string>
 
     <string name="action_settings">Settings</string>
+
+    <string name="title">Berita Surabaya</string>
+    <string name="opendraw">-</string>
+    <string name="closedraw">+</string>
+
+    <string-array name="menu">
+        <item>Pengaturan</item>
+        <item>Berita</item>
+        <item>Artikel</item>
+    </string-array>
+
+    <string-array name="pengaturan">
+        <item>Berita Saya</item>
+        <item>Tambah Berita</item>
+        <item>Log Out</item>
+    </string-array>
+
+    <string-array name="berita">
+        <item>Populer1</item>
+        <item>Terbaru</item>
+    </string-array>
+
+    <string-array name="artikel">
+        <item>Umum</item>
+        <item>Acara</item>
+        <item>Pengaduan</item>
+    </string-array>
+
+    <string name="multiplied_expanding">Multiplied expanding</string>
+    <string name="always_expanded">Always expanded</string>
+
+    <string-array name="film_genre">
+        <item>Action</item>
+        <item>Comedy</item>
+        <item>Drama</item>
+        <item>Musical</item>
+        <item>Thriller</item>
+    </string-array>
 </resources>

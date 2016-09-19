@@ -4,24 +4,22 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.StrictMode;
 import android.provider.MediaStore;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.TaskStackBuilder;
-import android.support.v4.view.ScrollingView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -34,6 +32,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
@@ -42,10 +41,18 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import pl.openrnd.multilevellistview.ItemInfo;
+import pl.openrnd.multilevellistview.MultiLevelListAdapter;
+import pl.openrnd.multilevellistview.MultiLevelListView;
+import pl.openrnd.multilevellistview.OnItemClickListener;
+
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.resource.drawable.GlideDrawable;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
+import com.example.widianta.beritasurabaya.data.BaseItem;
+import com.example.widianta.beritasurabaya.data.CustomDataProvider;
+import com.example.widianta.beritasurabaya.views.LevelBeamView;
 
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
@@ -62,8 +69,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -75,9 +84,13 @@ import java.net.URLConnection;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener {
+import pl.openrnd.multilevellistview.ItemInfo;
+import pl.openrnd.multilevellistview.MultiLevelListView;
+import pl.openrnd.multilevellistview.OnItemClickListener;
+
+public class MainActivity extends AppCompatActivity {
     private MainActivity mainActivity;
     private ProgressBar populerProgressBar;
     private ListView populerListView;
@@ -88,6 +101,7 @@ public class MainActivity extends AppCompatActivity
     private ProgressBar beritaAddProgressbar;
     private ProgressBar beritaDetailProgressBar;
     private ProgressBar progressbarKomentarAdd;
+    private ProgressBar loginProgressbar;
 
     private ImageView beritaAddImageimageView;
     private File fileUpload;
@@ -96,8 +110,8 @@ public class MainActivity extends AppCompatActivity
     private ImageView imageberitadetail;
     private ImageView beritadetailkomentarimageview;
 
-    private List<MenuItem> loginMenus;
-    private List<MenuItem> logoutMenus;
+//    private List<MenuItem> loginMenus;
+//    private List<MenuItem> logoutMenus;
 
     private SharedPreferences sharedPreferences;
     private SharedPreferences.Editor editor;
@@ -107,28 +121,29 @@ public class MainActivity extends AppCompatActivity
     private String imageAction;
     private String idKomentarDeleted;
 
+    private Button beritAddHapusGambar;
+    private Button bertiaDetailAddKomentar;
 
+    private ImageView imageViewAccess;
+
+    private MultiLevelListView multiLevelListView;
+
+    private LinearLayout linerlayoutVerticalDAta;
+
+    private List<BaseItem> baseItemList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
         secureRandom = new SecureRandom();
         mainActivity = this;
-        setContentView(R.layout.activity_main);
         beritaShow = "";
         imageAction = "";
 
+
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
 
         drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -136,20 +151,8 @@ public class MainActivity extends AppCompatActivity
         drawer.setDrawerListener(toggle);
         toggle.syncState();
 
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
 
-        loginMenus = new ArrayList<MenuItem>();
-        logoutMenus = new ArrayList<MenuItem>();
-        Menu menu = navigationView.getMenu();
-        for (int menuItemIndex = 0; menuItemIndex < menu.size(); menuItemIndex++) {
-            MenuItem menuItem= menu.getItem(menuItemIndex);
-            if(menuItem.getGroupId() == R.id.logingroupmenu){
-                loginMenus.add(menuItem);
-            } else if(menuItem.getGroupId() == R.id.logoutgroupmenu){
-                logoutMenus.add(menuItem);
-            }
-        }
+
         populerListView =(ListView) findViewById(R.id.listPopuler);
 
         populerProgressBar = (ProgressBar) findViewById(R.id.progressBarPopuler);
@@ -164,6 +167,8 @@ public class MainActivity extends AppCompatActivity
         progressbarKomentarAdd.getIndeterminateDrawable().setColorFilter(Color.GREEN, android.graphics.PorterDuff.Mode.MULTIPLY);
         progressbarKomentarAdd.setVisibility(View.GONE);
 
+        loginProgressbar = (ProgressBar) findViewById(R.id.loginprogressbar);
+
         beritaDetailProgressBar = (ProgressBar) findViewById(R.id.beritadetailProgressBar);
         beritaDetailProgressBar.getIndeterminateDrawable().setColorFilter(Color.GREEN, android.graphics.PorterDuff.Mode.MULTIPLY);
         beritaDetailProgressBar.setVisibility(View.GONE);
@@ -171,7 +176,6 @@ public class MainActivity extends AppCompatActivity
         beritaAddImageimageView = (ImageView) findViewById(R.id.beritaAddImage);
         beritaAddImageimageView.getLayoutParams().height = 200;
         beritaAddImageimageView.setVisibility(View.GONE);
-
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
@@ -226,11 +230,13 @@ public class MainActivity extends AppCompatActivity
                 }
         );
 
-        ((Button) findViewById(R.id.beritaddhapusgambar)).setOnClickListener(
+        beritAddHapusGambar = (Button) findViewById(R.id.beritaddhapusgambar);
+        beritAddHapusGambar.setOnClickListener(
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         imageAction = "hapus";
+                        beritaAddImageimageView.setVisibility(View.GONE);
                     }
                 }
         );
@@ -294,7 +300,8 @@ public class MainActivity extends AppCompatActivity
                 }
         );
 
-        ((Button) findViewById(R.id.bertiadetailaddkomentar)).setOnClickListener(
+        bertiaDetailAddKomentar = (Button) findViewById(R.id.bertiadetailaddkomentar);
+        bertiaDetailAddKomentar.setOnClickListener(
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -302,7 +309,7 @@ public class MainActivity extends AppCompatActivity
                         beritadetailkomentarimageview.setVisibility(View.GONE);
                         ((EditText) findViewById(R.id.beritadetailkomentar)).setText("");
                         fileUpload = null;
-                        findViewById(R.id.bertiadetailaddkomentar).setVisibility(View.GONE);
+                        bertiaDetailAddKomentar.setVisibility(View.GONE);
                         ((ScrollView) findViewById(R.id.beritadetail)).requestChildFocus(findViewById(R.id.beritadetaillastcomponent),
                                 findViewById(R.id.beritadetaillastcomponent));
                     }
@@ -325,50 +332,149 @@ public class MainActivity extends AppCompatActivity
 
         sharedPreferences = getApplicationContext().getSharedPreferences("MyPref", 0); // 0 - for private mode
         editor = sharedPreferences.edit();
-
-        if (sharedPreferences.getString("usernamenik", "").isEmpty()) {
-            setLoginMenu(true);
-            setLogoutMenu(false);
-        } else {
-            setLoginMenu(false);
-            setLogoutMenu(true);
-        }
+        confMenu();
 
         imageberitadetail = (ImageView) findViewById(R.id.imageberitadetail);
         imageberitadetail.getLayoutParams().height = 250;
         beritadetailkomentarimageview = (ImageView) findViewById(R.id.beritadetailkomentarimageview);
         beritadetailkomentarimageview.getLayoutParams().height = 250;
 
+        linerlayoutVerticalDAta = (LinearLayout) findViewById(R.id.linerlayoutVerticalDAta);
+
         closeLayoutsFirst();
-        if (savedInstanceState == null) {
-            new GetPopulerData().execute();
-            setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
-        } else {
-            if (savedInstanceState.getString("viewlayout").equals("beritaadd")) {
-                setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
-            } else if (savedInstanceState.getString("viewlayout").equals("populer")) {
-                beritaShow = savedInstanceState.getString("beritaShow");
-                new GetPopulerData().execute();
-                setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
-            } else if (savedInstanceState.getString("viewlayout").equals("userlogin")) {
-                setViewLayout((View) findViewById(R.id.userlogin), View.VISIBLE);
-            } else if (savedInstanceState.getString("viewlayout").equals("beritadetail")) {
-                setViewLayout((View) findViewById(R.id.beritadetail), View.VISIBLE);
-            } else if (savedInstanceState.getString("viewlayout").equals("userregister")) {
-                setViewLayout((View) findViewById(R.id.userregister), View.VISIBLE);
+        new GetPopulerData().execute();
+        setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
+    }
+
+    private void confMenu() {
+        multiLevelListView = (MultiLevelListView) findViewById(R.id.multiLevelMenu);
+
+        // custom ListAdapter
+        ListAdapter listAdapter = new ListAdapter();
+
+        multiLevelListView.setAdapter(listAdapter);
+        multiLevelListView.setOnItemClickListener(mOnItemClickListener);
+        if (baseItemList != null) {
+            baseItemList.clear();
+        }
+        baseItemList = CustomDataProvider.getInitialItems(sharedPreferences);
+        listAdapter.setDataItems(baseItemList);
+    }
+
+    private class ListAdapter extends MultiLevelListAdapter {
+
+        private class ViewHolder {
+            TextView nameView;
+            TextView infoView;
+            ImageView arrowView;
+            LevelBeamView levelBeamView;
+            ImageView iconMenu;
+        }
+
+        @Override
+        public List<?> getSubObjects(Object object) {
+            // DIEKSEKUSI SAAT KLIK PADA GROUP-ITEM
+            return CustomDataProvider.getSubItems((BaseItem) object);
+        }
+
+        @Override
+        public boolean isExpandable(Object object) {
+            return CustomDataProvider.isExpandable((BaseItem) object);
+        }
+
+        @Override
+        public View getViewForObject(Object object, View convertView, ItemInfo itemInfo) {
+            ViewHolder viewHolder;
+            if (convertView == null) {
+                viewHolder = new ViewHolder();
+                convertView = LayoutInflater.from(MainActivity.this).inflate(R.layout.data_item, null);
+                //viewHolder.infoView = (TextView) convertView.findViewById(R.id.dataItemInfo);
+                viewHolder.nameView = (TextView) convertView.findViewById(R.id.dataItemName);
+                viewHolder.arrowView = (ImageView) convertView.findViewById(R.id.dataItemArrow);
+                viewHolder.levelBeamView = (LevelBeamView) convertView.findViewById(R.id.dataItemLevelBeam);
+                viewHolder.iconMenu = (ImageView) convertView.findViewById(R.id.iconmenu);
+                convertView.setTag(viewHolder);
+            } else {
+                viewHolder = (ViewHolder) convertView.getTag();
             }
+
+            viewHolder.nameView.setText(((BaseItem) object).getName());
+            viewHolder.iconMenu.setBackgroundResource(((BaseItem) object).getImageMenu());
+
+            if (itemInfo.isExpandable()) {
+                viewHolder.arrowView.setVisibility(View.VISIBLE);
+                viewHolder.arrowView.setImageResource(itemInfo.isExpanded() ?
+                        R.drawable.ic_expand_less : R.drawable.ic_expand_more);
+            } else {
+                viewHolder.arrowView.setVisibility(View.GONE);
+            }
+
+            viewHolder.levelBeamView.setLevel(itemInfo.getLevel());
+
+            return convertView;
         }
     }
 
-    private void setLoginMenu(boolean isVisible) {
-        for (MenuItem menuItem: loginMenus) {
-            menuItem.setVisible(isVisible);
+    private OnItemClickListener mOnItemClickListener = new OnItemClickListener() {
+
+        private void showItemDescription(Object object, ItemInfo itemInfo) {
+            BaseItem baseItem = (BaseItem) object;
+            if (baseItem.getFunctionName() != null) {
+                setTitle(baseItem.getName());
+                switch (baseItem.getFunctionName()) {
+                    case "Populer" : showPopulerBeritaList("populer"); break;
+                    case "Terbaru" : showPopulerBeritaList("terbaru"); break;
+
+                    case "Umum" : showPopulerBeritaList("umum"); break;
+                    case "Acara" : showPopulerBeritaList("acara"); break;
+                    case "Pengaduan" : showPopulerBeritaList("pengaduan"); break;
+
+                    case "Berita Saya" : showPopulerBeritaList("beritasaya"); break;
+                    case "Tambah Berita" : closeLayouts();
+                        beritaAddProgressbar.setVisibility(View.GONE);
+                        beritaAddImageimageView.setVisibility(View.GONE);
+                        fileUpload = null;
+                        imageAction = "";
+
+                        ((EditText) findViewById(R.id.beritaaddJudulBerita)).setText("");
+                        ((EditText) findViewById(R.id.beritaaddDeskripsi)).setText("");
+                        ((TextView) findViewById(R.id.idberitaedit)).setText("");
+                        beritAddHapusGambar.setVisibility(View.GONE);
+                        setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
+                        break;
+                    case "Log Out" :
+                        editor.clear();
+                        editor.commit();
+                        confMenu();
+                        break;
+                    case "Log In" :
+                        ((EditText) findViewById(R.id.loginusernamenik)).setText("");
+                        ((EditText) findViewById(R.id.loginpassword)).setText("");
+
+                        closeLayouts();
+                        setViewLayout((View) findViewById(R.id.userlogin), View.VISIBLE);
+                        loginProgressbar.setVisibility(View.GONE);
+                        break;
+
+                }
+                drawer.closeDrawer(GravityCompat.START);
+            }
         }
-    }
-    private void setLogoutMenu(boolean isVisible) {
-        for (MenuItem menuItem: logoutMenus) {
-            menuItem.setVisible(isVisible);
+
+        @Override
+        public void onItemClicked(MultiLevelListView parent, View view, Object item, ItemInfo itemInfo) {
+            showItemDescription(item, itemInfo);
         }
+
+        @Override
+        public void onGroupItemClicked(MultiLevelListView parent, View view, Object item, ItemInfo itemInfo) {
+            showItemDescription(item, itemInfo);
+        }
+    };
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
     }
 
     @Override
@@ -530,7 +636,7 @@ public class MainActivity extends AppCompatActivity
             case 0:
                 if(resultCode == RESULT_OK){
                     Uri selectedImage = imageReturnedIntent.getData();
-                    beritaAddImageimageView.setImageURI(selectedImage);
+                    setImageFromGaleri(selectedImage, beritaAddImageimageView);
                     beritaAddImageimageView.setVisibility(View.VISIBLE);
                     fileUpload = new File(getFileName(selectedImage));
                     if (((TextView) findViewById(R.id.idberitaedit)).getText().length() >0) {
@@ -541,7 +647,7 @@ public class MainActivity extends AppCompatActivity
             case 1:
                 if(resultCode == RESULT_OK){
                     Uri selectedImage = imageReturnedIntent.getData();
-                    beritaAddImageimageView.setImageURI(selectedImage);
+                    setImageFromGaleri(selectedImage, beritaAddImageimageView);
                     beritaAddImageimageView.setVisibility(View.VISIBLE);
                     fileUpload = new File(getFileName(selectedImage));
                     if (((TextView) findViewById(R.id.idberitaedit)).getText().length() >0) {
@@ -552,7 +658,7 @@ public class MainActivity extends AppCompatActivity
             case 12:
                 if(resultCode == RESULT_OK){
                     Uri selectedImage = imageReturnedIntent.getData();
-                    beritadetailkomentarimageview.setImageURI(selectedImage);
+                    setImageFromGaleri(selectedImage, beritadetailkomentarimageview);
                     beritadetailkomentarimageview.setVisibility(View.VISIBLE);
                     fileUpload = new File(getFileName(selectedImage));
                 }
@@ -573,6 +679,45 @@ public class MainActivity extends AppCompatActivity
                     setFileUploadCamera(selectedImage);
                 }
                 break;
+            case 221:
+                if(resultCode == RESULT_OK){
+                    Uri imageUri = imageReturnedIntent.getData();
+                    setImageFromGaleri(imageUri, imageViewAccess);
+                    imageViewAccess.setVisibility(View.VISIBLE);
+                    fileUpload = new File(getFileName(imageUri));
+                    imageAction = "ubah";
+                }
+                break;
+            case 222:
+                if(resultCode == RESULT_OK){
+                    Bitmap selectedImage = (Bitmap) imageReturnedIntent.getExtras().get("data");
+                    imageViewAccess.setImageBitmap(selectedImage);
+                    imageViewAccess.setVisibility(View.VISIBLE);
+                    setFileUploadCamera(selectedImage);
+                    imageAction = "ubah";
+                }
+                break;
+        }
+    }
+
+    private void setImageFromGaleri(Uri imageUri, ImageView imageView) {
+        InputStream imageStream = null;
+        try {
+            imageStream = getContentResolver().openInputStream(imageUri);
+            Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
+            imageView.setImageBitmap(selectedImage);
+
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            selectedImage.compress(Bitmap.CompressFormat.JPEG, 90, stream);
+
+            byte [] data = stream.toByteArray();
+            BitmapDrawable bitmapDrawable = new BitmapDrawable(getResources(), selectedImage);
+            BitmapDrawable drawable = (BitmapDrawable) imageViewAccess.getDrawable();
+            Bitmap bmp = drawable.getBitmap();
+            Bitmap b = Bitmap.createScaledBitmap(bmp, selectedImage.getHeight() * 500 / selectedImage.getHeight(), 500, false);
+            imageView.setImageBitmap(b);
+        } catch (FileNotFoundException e) {
+            Log.e("FileEx", e.getMessage());
         }
     }
 
@@ -584,7 +729,7 @@ public class MainActivity extends AppCompatActivity
             out = new FileOutputStream(fileUpload);
             selectedImage.compress(Bitmap.CompressFormat.JPEG, 90, out);
             out.flush();
-            if (((TextView) findViewById(R.id.idberitaedit)).getText().length() >0) {
+            if (((TextView) findViewById(R.id.idberitaedit)).getText().length() > 0) {
                 imageAction = "ubah";
             }
         } catch (IOException e) {
@@ -820,7 +965,7 @@ public class MainActivity extends AppCompatActivity
 
         @Override
         protected void onPostExecute(String result) {
-            findViewById(R.id.loginprogressbar).setVisibility(View.GONE);
+            loginProgressbar.setVisibility(View.GONE);
             if (resultPostHTml.equals("1")) {
                 setViewLayout((View) findViewById(R.id.userlogin), View.GONE);
                 setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
@@ -829,8 +974,7 @@ public class MainActivity extends AppCompatActivity
                 editor.putString("password", password);
                 editor.commit();
 
-                setLoginMenu(false);
-                setLogoutMenu(true);
+                confMenu();
             } else {
                 Toast.makeText(MainActivity.this, "Username / Password salah",
                         Toast.LENGTH_SHORT).show();
@@ -841,7 +985,7 @@ public class MainActivity extends AppCompatActivity
         protected void onPreExecute() {
             usernamenik = ((EditText) findViewById(R.id.loginusernamenik)).getText().toString();
             password = ((EditText) findViewById(R.id.loginpassword)).getText().toString();
-            findViewById(R.id.loginprogressbar).setVisibility(View.VISIBLE);
+            loginProgressbar.setVisibility(View.VISIBLE);
         }
 
         @Override
@@ -913,54 +1057,6 @@ public class MainActivity extends AppCompatActivity
         super.onCreateSupportNavigateUpTaskStack(builder);
     }
 
-    //menunya
-    @SuppressWarnings("StatementWithEmptyBody")
-    @Override
-    public boolean onNavigationItemSelected(MenuItem item) {
-        // Handle navigation view item clicks here.
-        int id = item.getItemId();
-
-        if (id == R.id.populermenu) {
-            showPopulerBeritaList("populer");
-        } else if (id == R.id.beritaaddmenu) {
-            closeLayouts();
-            beritaAddProgressbar.setVisibility(View.GONE);
-            beritaAddImageimageView.setVisibility(View.GONE);
-            fileUpload = null;
-            imageAction = "";
-
-            ((EditText) findViewById(R.id.beritaaddJudulBerita)).setText("");
-            ((EditText) findViewById(R.id.beritaaddDeskripsi)).setText("");
-            ((TextView) findViewById(R.id.idberitaedit)).setText("");
-            ((Button) findViewById(R.id.beritaddhapusgambar)).setVisibility(View.GONE);
-            setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
-        } else if (id == R.id.loginmenu) {
-            ((EditText) findViewById(R.id.loginusernamenik)).setText("");
-            ((EditText) findViewById(R.id.loginpassword)).setText("");
-
-            closeLayouts();
-            setViewLayout((View) findViewById(R.id.userlogin), View.VISIBLE);
-            findViewById(R.id.loginprogressbar).setVisibility(View.GONE);
-        } else if (id == R.id.logoutmenu) {
-            editor.clear();
-            editor.commit();
-            setLoginMenu(true);
-            setLogoutMenu(false);
-        } else if (id == R.id.terbarumenu) {
-            showPopulerBeritaList("terbaru");
-        } else if (id == R.id.umummenu) {
-            showPopulerBeritaList("umum");
-        } else if (id == R.id.acaramenu) {
-            showPopulerBeritaList("acara");
-        } else if (id == R.id.pengaduanmenu) {
-            showPopulerBeritaList("pengaduan");
-        } else if (id == R.id.beritasayamenu) {
-            showPopulerBeritaList("beritasaya");
-        }
-        drawer.closeDrawer(GravityCompat.START);
-        return true;
-    }
-
     private void showPopulerBeritaList(String pilihan) {
         beritaShow = pilihan;
         closeLayouts();
@@ -982,7 +1078,7 @@ public class MainActivity extends AppCompatActivity
     private void setViewLayout(View view, int status) {
         if (view.getVisibility() == View.VISIBLE) {
             if (status == View.GONE) {
-                view.animate().translationX(view.getWidth());
+                view.animate().translationX(view.getWidth() * 4);
             } else {
                 view.animate().translationX(0);
             }
@@ -1092,6 +1188,7 @@ public class MainActivity extends AppCompatActivity
                                 @Override
                                 public boolean onResourceReady(GlideDrawable resource, String model, Target<GlideDrawable> target, boolean isFromMemoryCache, boolean isFirstResource) {
                                     beritaDetailProgressBar.setVisibility(View.GONE);
+                                    setKomentar(komentarTexts);
                                     return false;
                                 }
                             })
@@ -1099,8 +1196,8 @@ public class MainActivity extends AppCompatActivity
                 } else {
                     imageberitadetail.setVisibility(View.GONE);
                     beritaDetailProgressBar.setVisibility(View.GONE);
+                    setKomentar(komentarTexts);
                 }
-                setKomentar(komentarTexts);
             } catch (JSONException e) {
                 e.printStackTrace();
             } catch (MalformedURLException e) {
@@ -1108,7 +1205,11 @@ public class MainActivity extends AppCompatActivity
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            findViewById(R.id.bertiadetailaddkomentar).setVisibility(View.VISIBLE);
+            if (sharedPreferences.getString("usernamenik", "").isEmpty()) {
+                bertiaDetailAddKomentar.setVisibility(View.GONE);
+            } else {
+                bertiaDetailAddKomentar.setVisibility(View.VISIBLE);
+            }
         }
 
         @Override
@@ -1122,12 +1223,8 @@ public class MainActivity extends AppCompatActivity
             beritaDetailProgressBar.setVisibility(View.VISIBLE);
 
             findViewById(R.id.beritadetailkomentarform).setVisibility(View.GONE);
-            if (sharedPreferences.getString("usernamenik", "").isEmpty()) {
-                findViewById(R.id.bertiadetailaddkomentar).setVisibility(View.GONE);
-            } else {
-                findViewById(R.id.bertiadetailaddkomentar).setVisibility(View.VISIBLE);
-            }
-            findViewById(R.id.bertiadetailaddkomentar).setVisibility(View.GONE);
+            bertiaDetailAddKomentar.setVisibility(View.GONE);
+            linerlayoutVerticalDAta.removeAllViews();
         }
 
         @Override
@@ -1136,8 +1233,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void setKomentar(ArrayList<KomentarText> komentarTexts) {
-        LinearLayout relativeLayout = (LinearLayout) findViewById(R.id.linerlayoutVerticalDAta);
-        relativeLayout.removeAllViews();
+        linerlayoutVerticalDAta.removeAllViews();
         for (KomentarText komentarText : komentarTexts) {
             LayoutInflater inflater = mainActivity.getLayoutInflater();
             View rowView = inflater.inflate(R.layout.listkomentar, null, true);
@@ -1148,6 +1244,7 @@ public class MainActivity extends AppCompatActivity
 
             if (komentarText.getImage().length() > 0) {
                 imageView.setVisibility(View.VISIBLE);
+                ((TextView) rowView.findViewById(R.id.imagelinkkomentarralat)).setText(komentarText.getImage());
                 Glide.with(imageView.getContext())
                         .load(komentarText.getImage())
                         .placeholder(R.drawable.ic_local_florist_black_24dp)
@@ -1166,6 +1263,7 @@ public class MainActivity extends AppCompatActivity
             } else {
                 imageView.setVisibility(View.GONE);
             }
+
             if (komentarText.getIsAccess().equals("1")) {
                 rowView.findViewById(R.id.ralatlayout).setVisibility(View.VISIBLE);
                 ((Button) rowView.findViewById(R.id.hapuskomentar)).setOnClickListener(
@@ -1189,10 +1287,118 @@ public class MainActivity extends AppCompatActivity
                             }
                         }
                 );
+                ((Button) rowView.findViewById(R.id.ralatkomentar)).setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        fileUpload = null;
+                        LinearLayout linearLayout = (LinearLayout) v.getParent().getParent();
+                        RelativeLayout relativeLayoutRalat = (RelativeLayout) linearLayout.findViewById(R.id.komentarformralat);
+                        relativeLayoutRalat.findViewById(R.id.komentarformralat).setVisibility(View.VISIBLE);
+
+                        bertiaDetailAddKomentar.setVisibility(View.GONE);
+                        linearLayout.findViewById(R.id.komentarralatprogressbar).setVisibility(View.GONE);
+                        RelativeLayout ralatLayout = (RelativeLayout) linearLayout.findViewById(R.id.ralatlayout);
+                        ralatLayout.getLayoutParams().height = 0;
+                        ralatLayout.setVisibility(View.GONE);
+                        LinearLayout layoutkomentar = (LinearLayout) linearLayout.findViewById(R.id.layoutkomentar);
+                        layoutkomentar.getLayoutParams().height = 0;
+                        layoutkomentar.setVisibility(View.GONE);
+
+                        ((EditText)linearLayout.findViewById(R.id.komentaredittextralat)).setText(((TextView) linearLayout.findViewById(R.id.komentar)).getText());
+
+                        TextView imageLink = ((TextView) linearLayout.findViewById(R.id.imagelinkkomentarralat));
+                        ImageView imageRalatKomentar = ((ImageView) linearLayout.findViewById(R.id.komentarralatimage));
+                        if (imageLink.getText().length() > 0) {
+                            imageRalatKomentar.setVisibility(View.VISIBLE);
+                            Glide.with(imageRalatKomentar.getContext())
+                                    .load(imageLink.getText().toString())
+                                    .placeholder(R.drawable.ic_local_florist_black_24dp)
+                                    .listener(new RequestListener<String, GlideDrawable>() {
+                                        @Override
+                                        public boolean onException(Exception e, String model, Target<GlideDrawable> target, boolean isFirstResource) {
+                                            return false;
+                                        }
+
+                                        @Override
+                                        public boolean onResourceReady(GlideDrawable resource, String model, Target<GlideDrawable> target, boolean isFromMemoryCache, boolean isFirstResource) {
+                                            return false;
+                                        }
+                                    })
+                                    .into(imageRalatKomentar);
+                            linearLayout.findViewById(R.id.komentarlayouthapusgambar).setVisibility(View.VISIBLE);
+                        } else {
+                            imageRalatKomentar.setVisibility(View.GONE);
+                            linearLayout.findViewById(R.id.komentarlayouthapusgambar).setVisibility(View.GONE);
+                        }
+                    }
+                });
+
+                ((Button) rowView.findViewById(R.id.komentarralatbatal)).setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        fileUpload = null;
+                        LinearLayout linearLayout = (LinearLayout) v.getParent().getParent().getParent();
+
+                        RelativeLayout ralatLayout = (RelativeLayout) linearLayout.findViewById(R.id.ralatlayout);
+                        ralatLayout.getLayoutParams().height = RelativeLayout.LayoutParams.WRAP_CONTENT;
+                        ralatLayout.setVisibility(View.VISIBLE);
+                        LinearLayout layoutkomentar = (LinearLayout) linearLayout.findViewById(R.id.layoutkomentar);
+                        layoutkomentar.getLayoutParams().height = LinearLayout.LayoutParams.WRAP_CONTENT;
+                        layoutkomentar.setVisibility(View.VISIBLE);
+                        bertiaDetailAddKomentar.setVisibility(View.VISIBLE);
+
+                        linearLayout.findViewById(R.id.komentarformralat).setVisibility(View.GONE);
+                    }
+                });
+
+                ((Button) rowView.findViewById(R.id.komentarralatgaleributton)).setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        imageViewAccess = ((ImageView) ((LinearLayout) v.getParent().getParent().getParent()).findViewById(R.id.komentarralatimage));
+                        Intent pickPhoto = new Intent(Intent.ACTION_PICK,
+                                android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                        startActivityForResult(pickPhoto , 221);
+                    }
+                });
+
+                ((Button) rowView.findViewById(R.id.komentarlayouthapusgambar)).setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        imageViewAccess = ((ImageView) ((LinearLayout) v.getParent().getParent().getParent()).findViewById(R.id.komentarralatimage));
+                        imageViewAccess.setVisibility(View.GONE);
+                        imageAction = "hapus";
+                    }
+                });
+
+                ((Button) rowView.findViewById(R.id.komentarralatkamerabutton)).setOnClickListener(
+                        new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                imageViewAccess = ((ImageView) ((LinearLayout) v.getParent().getParent().getParent()).findViewById(R.id.komentarralatimage));
+                                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                                startActivityForResult(intent, 222);
+                            }
+                        });
+                ((Button) rowView.findViewById(R.id.komentarralatsimpan)).setOnClickListener(
+                        new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                new PostRalatKomentar(((LinearLayout) v.getParent().getParent().getParent().getParent())).execute();
+                            }
+                        });
+
+                ProgressBar komentarRalatProgressbar = (ProgressBar) rowView.findViewById(R.id.komentarralatprogressbar);
+                komentarRalatProgressbar.getIndeterminateDrawable().setColorFilter(Color.GREEN, android.graphics.PorterDuff.Mode.MULTIPLY);
+                komentarRalatProgressbar.getLayoutParams().height = 60;
             } else {
                 rowView.findViewById(R.id.ralatlayout).setVisibility(View.GONE);
             }
-            relativeLayout.addView(rowView);
+            rowView.findViewById(R.id.komentarformralat).setVisibility(View.GONE);
+            linerlayoutVerticalDAta.addView(rowView);
         }
     }
 
@@ -1425,7 +1631,7 @@ public class MainActivity extends AppCompatActivity
 
             if (imageText.getImage() != null && imageText.getImage().length() > 0) {
                 beritaAddImageimageView.setVisibility(View.VISIBLE);
-                ((Button) findViewById(R.id.beritaddhapusgambar)).setVisibility(View.VISIBLE);
+                beritAddHapusGambar.setVisibility(View.VISIBLE);
                 Glide.with(beritaAddImageimageView.getContext())
                         .load(imageText.getImage())
                         .listener(new RequestListener<String, GlideDrawable>() {
@@ -1450,7 +1656,7 @@ public class MainActivity extends AppCompatActivity
             imageAction = "";
             beritaAddProgressbar.setVisibility(View.GONE);
             beritaAddImageimageView.setVisibility(View.GONE);
-            ((Button) findViewById(R.id.beritaddhapusgambar)).setVisibility(View.GONE);
+            beritAddHapusGambar.setVisibility(View.GONE);
             ((TextView) findViewById(R.id.idberitaedit)).setText("");
             fileUpload = null;
             setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
@@ -1554,6 +1760,7 @@ public class MainActivity extends AppCompatActivity
             HttpPost httpPost = new HttpPost(PropertiesData.domain.concat("android/komentar-add"));
 
             List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+            nameValuePairs.add(new BasicNameValuePair("idkomentar", ""));
             nameValuePairs.add(new BasicNameValuePair("komentar", komentar));
             nameValuePairs.add(new BasicNameValuePair("imageaction", imageAction));
             nameValuePairs.add(new BasicNameValuePair("gambar", fileNameForUpload));
@@ -1579,7 +1786,11 @@ public class MainActivity extends AppCompatActivity
         protected void onPostExecute(String result) {
             progressbarKomentarAdd.setVisibility(View.GONE);
             findViewById(R.id.beritadetailkomentarform).setVisibility(View.GONE);
-            findViewById(R.id.bertiadetailaddkomentar).setVisibility(View.VISIBLE);
+            if (sharedPreferences.getString("usernamenik", "").isEmpty()) {
+                bertiaDetailAddKomentar.setVisibility(View.GONE);
+            } else {
+                bertiaDetailAddKomentar.setVisibility(View.VISIBLE);
+            }
             Toast.makeText(MainActivity.this, "Tersimpan", Toast.LENGTH_LONG).show();
             new GetKomentar().execute();
         }
@@ -1589,6 +1800,145 @@ public class MainActivity extends AppCompatActivity
             komentar = ((EditText) findViewById(R.id.beritadetailkomentar)).getText().toString();
             idberita = ((EditText) findViewById(R.id.beritadetailidberita)).getText().toString();
             progressbarKomentarAdd.setVisibility(View.VISIBLE);
+        }
+
+        @Override
+        protected void onProgressUpdate(Void... values) {
+        }
+    }
+
+    private class PostRalatKomentar extends AsyncTask<String, Void, String> {
+        private String komentar;
+        private String idKomentar;
+        private LinearLayout linearLayout;
+        private PostRalatKomentar(LinearLayout linearLayout1) {
+            super();
+            linearLayout = linearLayout1;
+        }
+        @Override
+        protected String doInBackground(String... params) {
+            String fileNameForUpload = "";
+            if (fileUpload != null ) {
+                String extension = "";
+                int i = fileUpload.getName().lastIndexOf('.');
+                if (i > 0) {
+                    extension = fileUpload.getName().substring(i + 1);
+                    if (extension.length() > 0) {
+                        BufferedReader inputStream = null;
+                        URL myurl = null;
+                        FTPClient con = null;
+                        FileInputStream in = null;
+
+                        try {
+
+                            myurl = new URL(PropertiesData.domain.concat("android/getfilename-").concat(extension)
+                                    .concat("?usernamenik=").concat(sharedPreferences.getString("usernamenik", ""))
+                                    .concat("&password=").concat(sharedPreferences.getString("password", "")));
+                            URLConnection dc = myurl.openConnection();
+                            inputStream = new BufferedReader(new InputStreamReader(
+                                    dc.getInputStream()));
+                            fileNameForUpload = inputStream.readLine();
+                            if (fileNameForUpload.length() > 0) {
+                                Bitmap bitmapImage = BitmapFactory.decodeFile(fileUpload.getAbsolutePath());
+                                int height = bitmapImage.getHeight();
+                                int width = bitmapImage.getWidth();
+                                if (width > 277) {
+                                    height = 277 * height / width;
+                                    width = 277;
+                                }
+                                Bitmap bitmapReady = Bitmap.createScaledBitmap(bitmapImage, width, height, true);
+                                File sd = Environment.getExternalStorageDirectory();
+                                File dest = new File(sd, fileNameForUpload);
+
+                                FileOutputStream out = null;
+                                try {
+                                    out = new FileOutputStream(dest);
+                                    bitmapReady.compress(Bitmap.CompressFormat.JPEG, 90, out);
+                                    out.flush();
+                                    out.close();
+
+                                    fileUpload = dest;
+                                    con = new FTPClient();
+                                    con.connect(PropertiesData.ftpdomain);
+                                    if (con.login(PropertiesData.ftpusername, PropertiesData.ftppassword)) {
+                                        con.enterLocalPassiveMode(); // important!
+                                        con.setFileType(FTP.BINARY_FILE_TYPE);
+                                        in = new FileInputStream(fileUpload);
+                                        con.storeFile(fileUpload.getName(), in);
+                                        con.logout();
+                                    }
+                                    dest.delete();
+                                    out = null;
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                } finally {
+                                    if (out != null) {
+                                        out.close();
+                                    }
+                                    if (con != null) {
+                                        con.disconnect();
+                                    }
+                                    if (in != null) {
+                                        in.close();
+                                    }
+                                }
+                            }
+
+                        } catch (MalformedURLException e) {
+                            Log.e(e.getLocalizedMessage(), e.getMessage());
+                        } catch (IOException e) {
+                            Log.e(e.getLocalizedMessage(), e.getMessage());
+                        } finally {
+                            if (inputStream != null) {
+                                try {
+                                    inputStream.close();
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            HttpClient httpclient = new DefaultHttpClient();
+            HttpPost httpPost = new HttpPost(PropertiesData.domain.concat("android/komentar-add"));
+
+            List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+            Log.i("dddd", idKomentar);
+            nameValuePairs.add(new BasicNameValuePair("idkomentar", idKomentar));
+            nameValuePairs.add(new BasicNameValuePair("komentar", komentar));
+            nameValuePairs.add(new BasicNameValuePair("imageaction", imageAction));
+            nameValuePairs.add(new BasicNameValuePair("gambar", fileNameForUpload));
+            nameValuePairs.add(new BasicNameValuePair("usernamenik", sharedPreferences.getString("usernamenik", "")));
+            nameValuePairs.add(new BasicNameValuePair("password", sharedPreferences.getString("password", "")));
+
+            try {
+                httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+                HttpResponse response = httpclient.execute(httpPost);
+                viewhtmlPost(response);
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            } catch (ClientProtocolException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            linearLayout.findViewById(R.id.komentarralatprogressbar).setVisibility(View.GONE);
+            new GetKomentar().execute();
+            bertiaDetailAddKomentar.setVisibility(View.VISIBLE);
+        }
+
+        @Override
+        protected void onPreExecute() {
+            idKomentar = ((TextView)linearLayout.findViewById(R.id.komentarid)).getText().toString();
+            komentar = ((EditText)linearLayout.findViewById(R.id.komentaredittextralat)).getText().toString();
+            linearLayout.findViewById(R.id.komentarralatprogressbar).setVisibility(View.VISIBLE);
         }
 
         @Override
