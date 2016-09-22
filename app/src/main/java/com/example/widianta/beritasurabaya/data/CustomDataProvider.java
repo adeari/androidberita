@@ -98,6 +98,7 @@ public class CustomDataProvider {
         List<BaseItem> list = new ArrayList<>();
         list.add(new Item("Berita Saya", "Berita Saya", R.drawable.ic_insert_drive_file_black_24dp));
         list.add(new Item("Tambah Berita", "Tambah Berita", R.drawable.ic_add_black_24dp));
+        list.add(new Item("Saya", "Saya", R.drawable.ic_person_outline_blue_24dp));
         list.add(new Item("Log Out", "Log Out", R.drawable.ic_alarm_off_red_24dp));
         return list;
     }

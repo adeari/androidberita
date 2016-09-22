@@ -17,6 +17,7 @@ import android.os.Environment;
 import android.os.StrictMode;
 import android.provider.MediaStore;
 import android.support.v4.app.TaskStackBuilder;
+import android.support.v7.widget.AppCompatImageButton;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -41,6 +42,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import de.hdodenhof.circleimageview.CircleImageView;
 import pl.openrnd.multilevellistview.ItemInfo;
 import pl.openrnd.multilevellistview.MultiLevelListAdapter;
 import pl.openrnd.multilevellistview.MultiLevelListView;
@@ -102,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
     private ProgressBar beritaDetailProgressBar;
     private ProgressBar progressbarKomentarAdd;
     private ProgressBar loginProgressbar;
+    private ProgressBar profileProgressBar;
 
     private ImageView beritaAddImageimageView;
     private File fileUpload;
@@ -109,9 +112,6 @@ public class MainActivity extends AppCompatActivity {
 
     private ImageView imageberitadetail;
     private ImageView beritadetailkomentarimageview;
-
-//    private List<MenuItem> loginMenus;
-//    private List<MenuItem> logoutMenus;
 
     private SharedPreferences sharedPreferences;
     private SharedPreferences.Editor editor;
@@ -125,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
     private Button bertiaDetailAddKomentar;
 
     private ImageView imageViewAccess;
+    private CircleImageView profileImage;
 
     private MultiLevelListView multiLevelListView;
 
@@ -169,13 +170,19 @@ public class MainActivity extends AppCompatActivity {
 
         loginProgressbar = (ProgressBar) findViewById(R.id.loginprogressbar);
 
+        profileProgressBar = (ProgressBar) findViewById(R.id.profileProgressBar);
+        profileProgressBar.getIndeterminateDrawable().setColorFilter(Color.GREEN, android.graphics.PorterDuff.Mode.MULTIPLY);
+        profileProgressBar.setVisibility(View.GONE);
+
         beritaDetailProgressBar = (ProgressBar) findViewById(R.id.beritadetailProgressBar);
         beritaDetailProgressBar.getIndeterminateDrawable().setColorFilter(Color.GREEN, android.graphics.PorterDuff.Mode.MULTIPLY);
         beritaDetailProgressBar.setVisibility(View.GONE);
 
         beritaAddImageimageView = (ImageView) findViewById(R.id.beritaAddImage);
-        beritaAddImageimageView.getLayoutParams().height = 200;
+        beritaAddImageimageView.getLayoutParams().height = 250;
         beritaAddImageimageView.setVisibility(View.GONE);
+
+        profileImage = (CircleImageView) findViewById(R.id.profileImage);
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
@@ -211,6 +218,17 @@ public class MainActivity extends AppCompatActivity {
                 }
         );
 
+        ((AppCompatImageButton) findViewById(R.id.profilegalerybutton)).setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Intent pickPhoto = new Intent(Intent.ACTION_PICK,
+                        android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                        startActivityForResult(pickPhoto , 41);
+                    }
+                }
+        );
+
         ((Button) findViewById(R.id.beritaaddKameraButton)).setOnClickListener(
                 new View.OnClickListener() {
                     @Override
@@ -226,6 +244,16 @@ public class MainActivity extends AppCompatActivity {
                     public void onClick(View v) {
                         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                         startActivityForResult(intent, 13);
+                    }
+                }
+        );
+
+        ((AppCompatImageButton) findViewById(R.id.profilekamerabutton)).setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                        startActivityForResult(intent, 42);
                     }
                 }
         );
@@ -309,6 +337,7 @@ public class MainActivity extends AppCompatActivity {
                         beritadetailkomentarimageview.setVisibility(View.GONE);
                         ((EditText) findViewById(R.id.beritadetailkomentar)).setText("");
                         fileUpload = null;
+                        imageAction = "";
                         bertiaDetailAddKomentar.setVisibility(View.GONE);
                         ((ScrollView) findViewById(R.id.beritadetail)).requestChildFocus(findViewById(R.id.beritadetaillastcomponent),
                                 findViewById(R.id.beritadetaillastcomponent));
@@ -429,6 +458,13 @@ public class MainActivity extends AppCompatActivity {
                     case "Acara" : showPopulerBeritaList("acara"); break;
                     case "Pengaduan" : showPopulerBeritaList("pengaduan"); break;
 
+                    case "Saya" :
+                        closeLayouts();
+                        setViewLayout((View) findViewById(R.id.profileuser), View.VISIBLE);
+                        fileUpload = null;
+                        imageAction = "";
+                        new GetMyProfile().execute();
+                        break;
                     case "Berita Saya" : showPopulerBeritaList("beritasaya"); break;
                     case "Tambah Berita" : closeLayouts();
                         beritaAddProgressbar.setVisibility(View.GONE);
@@ -611,6 +647,7 @@ public class MainActivity extends AppCompatActivity {
                 beritaAddImageimageView.setVisibility(View.GONE);
             }
             fileUpload = null;
+            imageAction = "";
             Toast.makeText(MainActivity.this, "Tersimpan",
                     Toast.LENGTH_LONG).show();
         }
@@ -697,6 +734,21 @@ public class MainActivity extends AppCompatActivity {
                     imageAction = "ubah";
                 }
                 break;
+            case 41:
+                if(resultCode == RESULT_OK){
+                    Uri selectedImage = imageReturnedIntent.getData();
+                    setImageFromGaleri(selectedImage, profileImage);
+                    fileUpload = new File(getFileName(selectedImage));
+                }
+                break;
+            case 42:
+                if(resultCode == RESULT_OK){
+                    Bitmap selectedImage = (Bitmap) imageReturnedIntent.getExtras().get("data");
+                    profileImage.setImageBitmap(selectedImage);
+                    profileImage.setVisibility(View.VISIBLE);
+                    setFileUploadCamera(selectedImage);
+                }
+                break;
         }
     }
 
@@ -712,7 +764,7 @@ public class MainActivity extends AppCompatActivity {
 
             byte [] data = stream.toByteArray();
             BitmapDrawable bitmapDrawable = new BitmapDrawable(getResources(), selectedImage);
-            BitmapDrawable drawable = (BitmapDrawable) imageViewAccess.getDrawable();
+            BitmapDrawable drawable = (BitmapDrawable) imageView.getDrawable();
             Bitmap bmp = drawable.getBitmap();
             Bitmap b = Bitmap.createScaledBitmap(bmp, selectedImage.getHeight() * 500 / selectedImage.getHeight(), 500, false);
             imageView.setImageBitmap(b);
@@ -1098,6 +1150,8 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 case R.id.beritaadd: viewLayout = "beritaadd";
                     break;
+                case R.id.profileuser: viewLayout = "profileuser";
+                    break;
             }
         }
     }
@@ -1108,6 +1162,7 @@ public class MainActivity extends AppCompatActivity {
         setViewLayout((View) findViewById(R.id.beritaadd), View.GONE);
         setViewLayout((View) findViewById(R.id.userregister), View.GONE);
         setViewLayout((View) findViewById(R.id.userlogin), View.GONE);
+        setViewLayout((View) findViewById(R.id.profileuser), View.GONE);
     }
 
     public void closeLayoutsFirst() {
@@ -1116,6 +1171,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.beritaadd).setVisibility(View.GONE);
         findViewById(R.id.userregister).setVisibility(View.GONE);
         findViewById(R.id.userlogin).setVisibility(View.GONE);
+        findViewById(R.id.profileuser).setVisibility(View.GONE);
     }
 
     private class GetBeritaDetail extends AsyncTask<String, Void, String> {
@@ -1292,6 +1348,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onClick(View v) {
                         fileUpload = null;
+                        imageAction = "";
                         LinearLayout linearLayout = (LinearLayout) v.getParent().getParent();
                         RelativeLayout relativeLayoutRalat = (RelativeLayout) linearLayout.findViewById(R.id.komentarformralat);
                         relativeLayoutRalat.findViewById(R.id.komentarformralat).setVisibility(View.VISIBLE);
@@ -1339,6 +1396,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onClick(View v) {
                         fileUpload = null;
+                        imageAction = "";
                         LinearLayout linearLayout = (LinearLayout) v.getParent().getParent().getParent();
 
                         RelativeLayout ralatLayout = (RelativeLayout) linearLayout.findViewById(R.id.ralatlayout);
@@ -1659,6 +1717,7 @@ public class MainActivity extends AppCompatActivity {
             beritAddHapusGambar.setVisibility(View.GONE);
             ((TextView) findViewById(R.id.idberitaedit)).setText("");
             fileUpload = null;
+            imageAction = "";
             setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
         }
 
@@ -1793,6 +1852,8 @@ public class MainActivity extends AppCompatActivity {
             }
             Toast.makeText(MainActivity.this, "Tersimpan", Toast.LENGTH_LONG).show();
             new GetKomentar().execute();
+            fileUpload = null;
+            imageAction = "";
         }
 
         @Override
@@ -1932,6 +1993,8 @@ public class MainActivity extends AppCompatActivity {
             linearLayout.findViewById(R.id.komentarralatprogressbar).setVisibility(View.GONE);
             new GetKomentar().execute();
             bertiaDetailAddKomentar.setVisibility(View.VISIBLE);
+            fileUpload = null;
+            imageAction = "";
         }
 
         @Override
@@ -1939,6 +2002,84 @@ public class MainActivity extends AppCompatActivity {
             idKomentar = ((TextView)linearLayout.findViewById(R.id.komentarid)).getText().toString();
             komentar = ((EditText)linearLayout.findViewById(R.id.komentaredittextralat)).getText().toString();
             linearLayout.findViewById(R.id.komentarralatprogressbar).setVisibility(View.VISIBLE);
+        }
+
+        @Override
+        protected void onProgressUpdate(Void... values) {
+        }
+    }
+
+    private class GetMyProfile extends AsyncTask<String, Void, String> {
+        private JSONObject jsonObject;
+        @Override
+        protected String doInBackground(String... params) {
+            BufferedReader inputStream = null;
+            URL myurl = null;
+            try {
+                myurl = new URL(PropertiesData.domain.concat("android/profileuser").concat("?usernamenik=").concat(sharedPreferences.getString("usernamenik", ""))
+                        .concat("&password=").concat(sharedPreferences.getString("password", "")));
+                URLConnection dc = myurl.openConnection();
+                inputStream = new BufferedReader(new InputStreamReader(
+                        dc.getInputStream()));
+                jsonObject = new JSONObject(inputStream.readLine());
+                Log.i("d", jsonObject.get("name").toString());
+            } catch (MalformedURLException e) {
+                Log.e(e.getLocalizedMessage(), e.getMessage());
+            } catch (IOException e) {
+                Log.e(e.getLocalizedMessage(), e.getMessage());
+            } catch (JSONException e) {
+                Log.e(e.getLocalizedMessage(), e.getMessage());
+            } finally {
+                if (inputStream != null) {
+                    try {
+                        inputStream.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            try {
+                ((EditText) findViewById(R.id.profileNama)).setText(jsonObject.get("name").toString());
+                ((EditText) findViewById(R.id.profileNik)).setText(jsonObject.get("nik").toString());
+                ((EditText) findViewById(R.id.profileEmail)).setText(jsonObject.get("email").toString());
+                String imageLink = jsonObject.get("gambar").toString();
+                if (imageLink.isEmpty()) {
+                    profileProgressBar.setVisibility(View.GONE);
+                } else {
+                    Glide.with(beritaAddImageimageView.getContext())
+                        .load(imageLink)
+                        .listener(new RequestListener<String, GlideDrawable>() {
+                            @Override
+                            public boolean onException(Exception e, String model, Target<GlideDrawable> target, boolean isFirstResource) {
+                                return false;
+                            }
+
+                            @Override
+                            public boolean onResourceReady(GlideDrawable resource, String model, Target<GlideDrawable> target, boolean isFromMemoryCache, boolean isFirstResource) {
+                                profileProgressBar.setVisibility(View.GONE);
+                                return false;
+                            }
+                        })
+                        .into(profileImage);
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        protected void onPreExecute() {
+            profileImage.setImageBitmap(BitmapFactory.decodeResource(getResources(),
+                    R.drawable.ic_person_blue_24dp));
+            ((EditText) findViewById(R.id.profileNama)).setText("");
+            ((EditText) findViewById(R.id.profileNik)).setText("");
+            ((EditText) findViewById(R.id.profileEmail)).setText("");
+            profileProgressBar.setVisibility(View.VISIBLE);
         }
 
         @Override
