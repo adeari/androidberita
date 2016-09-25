@@ -21,9 +21,9 @@
 
     </android.support.design.widget.AppBarLayout>
 
-    <include layout="@layout/populer" android:id="@+id/populer" />
+    <include layout="@layout/populer" android:id="@+id/populer" android:visibility="gone"/>
     <include layout="@layout/beritaadd" android:id="@+id/beritaadd" android:visibility="gone"/>
-    <include layout="@layout/beritadetail" android:id="@+id/beritadetail" android:visibility="gone"/>
+    <include layout="@layout/beritadetail" android:id="@+id/beritadetail"/>
     <include layout="@layout/userlogin" android:id="@+id/userlogin" android:visibility="gone"/>
     <include layout="@layout/userregister" android:id="@+id/userregister" android:visibility="gone"/>
     <include layout="@layout/profileuser" android:id="@+id/profileuser" android:visibility="gone"/>
