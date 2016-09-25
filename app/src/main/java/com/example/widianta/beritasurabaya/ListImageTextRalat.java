@@ -110,7 +110,7 @@ public class ListImageTextRalat extends ArrayAdapter<ImageText> {
             }
             Glide.with(imageView.getContext())
                     .load(imageText.getImage())
-                    .placeholder(R.drawable.ic_local_florist_black_24dp)
+//                    .placeholder(R.drawable.ic_local_florist_black_24dp)
                     .listener(new RequestListener<String, GlideDrawable>() {
                         @Override
                         public boolean onException(Exception e, String model, Target<GlideDrawable> target, boolean isFirstResource) {
@@ -129,6 +129,8 @@ public class ListImageTextRalat extends ArrayAdapter<ImageText> {
                         }
                     })
                     .into(imageView);
+        } else {
+            imageView.setVisibility(View.GONE);
         }
         return rowView;
     };

@@ -1,22 +1,31 @@
 apply plugin: 'com.android.application'
 
 android {
+    signingConfigs {
+        freee {
+            keyAlias 'adeari'
+            keyPassword 'asdf1234'
+            storePassword 'asdf1234'
+        }
+    }
     compileSdkVersion 24
     buildToolsVersion "24.0.1"
     useLibrary 'org.apache.http.legacy'
-
     defaultConfig {
         applicationId "com.example.widianta.myapplication"
         minSdkVersion 15
         targetSdkVersion 24
         versionCode 1
         versionName "1.0"
+        signingConfig signingConfigs.freee
     }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+    productFlavors {
     }
 }
 
@@ -28,6 +37,7 @@ dependencies {
     compile 'com.android.support:design:24.1.1'
     compile 'com.android.support:support-v4:24.1.1'
     compile files('libs/commons-net-3.5.jar')
-    compile group: "pl.openrnd.android", name: "multi-level-listview", version: "1.0.1"
+    compile 'pl.openrnd.android:multi-level-listview:1.0.1'
     compile 'de.hdodenhof:circleimageview:2.1.0'
+    compile 'org.jbundle.util.osgi.wrapped:org.jbundle.util.osgi.wrapped.org.apache.http.client:4.1.2'
 }

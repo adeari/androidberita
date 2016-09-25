@@ -11,12 +11,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:visibility="visible"
-        android:layout_marginBottom="4dp">
+        android:layout_marginBottom="10dp"
+        android:layout_marginTop="10dp"
+        android:paddingTop="5dp"
+        android:paddingBottom="5dp">
 
         <Button
             style="?android:attr/buttonStyleSmall"
             android:layout_width="wrap_content"
-            android:layout_height="20dp"
+            android:layout_height="35dp"
             android:text="Ralat"
             android:id="@+id/beritasayaralat"
             android:background="#9ef573"
@@ -26,7 +29,7 @@
         <Button
             style="?android:attr/buttonStyleSmall"
             android:layout_width="wrap_content"
-            android:layout_height="20dp"
+            android:layout_height="35dp"
             android:text="Hapus"
             android:id="@+id/bertiasayahapus"
             android:layout_alignParentTop="true"
@@ -66,7 +69,8 @@
                 android:text="Medium Text"
                 android:layout_marginLeft="10dp"
                 android:layout_marginTop="5dp"
-                android:padding="2dp"/>
+                android:padding="2dp"
+                android:textColor="#080808" />
         </LinearLayout>
 
         <EditText

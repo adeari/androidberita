@@ -1,23 +1,29 @@
 package com.example.widianta.beritasurabaya;
 
+import android.Manifest;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.StrictMode;
 import android.provider.MediaStore;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.TaskStackBuilder;
-import android.support.v7.widget.AppCompatImageButton;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -31,9 +37,9 @@ import android.view.MenuItem;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
@@ -85,14 +91,12 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
-import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
-import pl.openrnd.multilevellistview.ItemInfo;
-import pl.openrnd.multilevellistview.MultiLevelListView;
-import pl.openrnd.multilevellistview.OnItemClickListener;
-
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements LocationListener {
     private MainActivity mainActivity;
     private ProgressBar populerProgressBar;
     private ListView populerListView;
@@ -123,6 +127,7 @@ public class MainActivity extends AppCompatActivity {
 
     private Button beritAddHapusGambar;
     private Button bertiaDetailAddKomentar;
+    private Button populerTambahBeritaButton;
 
     private ImageView imageViewAccess;
     private CircleImageView profileImage;
@@ -133,6 +138,14 @@ public class MainActivity extends AppCompatActivity {
 
     private List<BaseItem> baseItemList;
 
+    private Spinner beritaAddSpinner;
+
+    private LocationManager locationManager;
+    private final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 10; // 10 meters
+    private final long MIN_TIME_BW_UPDATES = 1000 * 60 * 1; // 1 minute
+    private Timer timer;
+    private MyTimerTask myTimerTask;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -141,7 +154,6 @@ public class MainActivity extends AppCompatActivity {
         mainActivity = this;
         beritaShow = "";
         imageAction = "";
-
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -152,9 +164,7 @@ public class MainActivity extends AppCompatActivity {
         drawer.setDrawerListener(toggle);
         toggle.syncState();
 
-
-
-        populerListView =(ListView) findViewById(R.id.listPopuler);
+        populerListView = (ListView) findViewById(R.id.listPopuler);
 
         populerProgressBar = (ProgressBar) findViewById(R.id.progressBarPopuler);
         populerProgressBar.getIndeterminateDrawable().setColorFilter(Color.GREEN, android.graphics.PorterDuff.Mode.MULTIPLY);
@@ -182,7 +192,7 @@ public class MainActivity extends AppCompatActivity {
         beritaAddImageimageView.getLayoutParams().height = 250;
         beritaAddImageimageView.setVisibility(View.GONE);
 
-        profileImage = (CircleImageView) findViewById(R.id.profileImage);
+        profileImage = (CircleImageView) findViewById(R.id.profileUserImage);
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
@@ -192,17 +202,18 @@ public class MainActivity extends AppCompatActivity {
         _listImageTextRalat = new ListImageTextRalat(mainActivity, _arrayImageTexts);
 
         ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(this,
-                android.R.layout.simple_spinner_item, new String[] {"Umum", "Acara", "Pengaduan"});
+                android.R.layout.simple_spinner_item, new String[]{"Umum", "Acara", "Pengaduan"});
         dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        ((Spinner)findViewById(R.id.beritaaddSpinner)).setAdapter(dataAdapter);
+        beritaAddSpinner = (Spinner) findViewById(R.id.beritaaddSpinner);
+        beritaAddSpinner.setAdapter(dataAdapter);
 
         ((Button) findViewById(R.id.beritaaddGaleriButton)).setOnClickListener(
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         Intent pickPhoto = new Intent(Intent.ACTION_PICK,
-                        android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                        startActivityForResult(pickPhoto , 1);
+                                android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                        startActivityForResult(pickPhoto, 1);
                     }
                 }
         );
@@ -212,19 +223,19 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onClick(View v) {
                         Intent pickPhoto = new Intent(Intent.ACTION_PICK,
-                        android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                        startActivityForResult(pickPhoto , 12);
+                                android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                        startActivityForResult(pickPhoto, 12);
                     }
                 }
         );
 
-        ((AppCompatImageButton) findViewById(R.id.profilegalerybutton)).setOnClickListener(
+        ((ImageButton) findViewById(R.id.profilegalerybutton)).setOnClickListener(
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         Intent pickPhoto = new Intent(Intent.ACTION_PICK,
-                        android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                        startActivityForResult(pickPhoto , 41);
+                                android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                        startActivityForResult(pickPhoto, 41);
                     }
                 }
         );
@@ -248,7 +259,17 @@ public class MainActivity extends AppCompatActivity {
                 }
         );
 
-        ((AppCompatImageButton) findViewById(R.id.profilekamerabutton)).setOnClickListener(
+        populerTambahBeritaButton = ((Button) findViewById(R.id.populerTambahBeritaButton));
+        populerTambahBeritaButton.setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        tambahBeritaPrepare();
+                    }
+                }
+        );
+
+        ((ImageButton) findViewById(R.id.profilekamerabutton)).setOnClickListener(
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -271,19 +292,19 @@ public class MainActivity extends AppCompatActivity {
 
         ((Button) findViewById(R.id.beritaaddSimpan)).setOnClickListener(
                 new View.OnClickListener() {
-               @Override
-               public void onClick(View v) {
-                    if (((EditText) findViewById(R.id.beritaaddJudulBerita)).getText().length() == 0) {
-                        Toast.makeText(MainActivity.this, "Tulis Judul Berita",
-                                Toast.LENGTH_SHORT).show();
-                    } else if (((EditText) findViewById(R.id.beritaaddDeskripsi)).getText().length() == 0) {
-                       Toast.makeText(MainActivity.this, "Tulis Deskripsi Berita",
-                               Toast.LENGTH_SHORT).show();
-                   } else {
-                       new PostBerita().execute();
-                   }
-               }
-           }
+                    @Override
+                    public void onClick(View v) {
+                        if (((EditText) findViewById(R.id.beritaaddJudulBerita)).getText().length() == 0) {
+                            Toast.makeText(MainActivity.this, "Tulis Judul Berita",
+                                    Toast.LENGTH_SHORT).show();
+                        } else if (((EditText) findViewById(R.id.beritaaddDeskripsi)).getText().length() == 0) {
+                            Toast.makeText(MainActivity.this, "Tulis Deskripsi Berita",
+                                    Toast.LENGTH_SHORT).show();
+                        } else {
+                            new PostBerita().execute();
+                        }
+                    }
+                }
         );
 
         ((Button) findViewById(R.id.daftarbutton)).setOnClickListener(
@@ -359,6 +380,39 @@ public class MainActivity extends AppCompatActivity {
                 }
         );
 
+        ((Button) findViewById(R.id.profileEditButton)).setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if (((EditText) findViewById(R.id.profileNama)).getText().length() == 0) {
+                            Toast.makeText(MainActivity.this, "Isikan nama", Toast.LENGTH_SHORT).show();
+                        } else if (((EditText) findViewById(R.id.profileNik)).getText().length() == 0) {
+                            Toast.makeText(MainActivity.this, "Isikan NIK", Toast.LENGTH_SHORT).show();
+                        } else if (((EditText) findViewById(R.id.profileEmail)).getText().length() == 0) {
+                            Toast.makeText(MainActivity.this, "Isikan Email", Toast.LENGTH_SHORT).show();
+                        } else {
+                            new EditMyProfile().execute();
+                        }
+                    }
+                }
+        );
+
+        ((Button) findViewById(R.id.profileGantiPasswordButton)).setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        String profilePassword = ((EditText) findViewById(R.id.profilePassword)).getText().toString();
+                        if (profilePassword.length() == 0) {
+                            Toast.makeText(MainActivity.this, "Isikan Password", Toast.LENGTH_SHORT).show();
+                        } else if (!profilePassword.equals(((EditText) findViewById(R.id.profileRePassword)).getText().toString())) {
+                            Toast.makeText(MainActivity.this, "Re password harus sama dengan password", Toast.LENGTH_SHORT).show();
+                        } else {
+                            new GantiPasswordProfileProfile().execute();
+                        }
+                    }
+                }
+        );
+
         sharedPreferences = getApplicationContext().getSharedPreferences("MyPref", 0); // 0 - for private mode
         editor = sharedPreferences.edit();
         confMenu();
@@ -373,6 +427,29 @@ public class MainActivity extends AppCompatActivity {
         closeLayoutsFirst();
         new GetPopulerData().execute();
         setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
+
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        timer = new Timer();
+        myTimerTask = new MyTimerTask();
+//        timer.schedule(myTimerTask, 0, 60000); // every minutes
+        timer.schedule(myTimerTask, 0, 300000); // every minutes
+    }
+
+    @Override
+    public void onLocationChanged(Location location1) {
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+        Log.d("Latitude","status");
     }
 
     private void confMenu() {
@@ -444,6 +521,28 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void tambahBeritaPrepare() {
+        closeLayouts();
+        beritaAddProgressbar.setVisibility(View.GONE);
+        beritaAddImageimageView.setVisibility(View.GONE);
+        fileUpload = null;
+        imageAction = "";
+
+        ((EditText) findViewById(R.id.beritaaddJudulBerita)).setText("");
+        ((EditText) findViewById(R.id.beritaaddDeskripsi)).setText("");
+        ((TextView) findViewById(R.id.idberitaedit)).setText("");
+        beritAddHapusGambar.setVisibility(View.GONE);
+        setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
+
+        int position = 0;
+        while (position < beritaAddSpinner.getAdapter().getCount()) {
+            if (beritaAddSpinner.getAdapter().getItem(position).toString().equalsIgnoreCase(beritaShow)) {
+                beritaAddSpinner.setSelection(position);
+                break;
+            }
+            position++;
+        }
+    }
     private OnItemClickListener mOnItemClickListener = new OnItemClickListener() {
 
         private void showItemDescription(Object object, ItemInfo itemInfo) {
@@ -467,21 +566,14 @@ public class MainActivity extends AppCompatActivity {
                         break;
                     case "Berita Saya" : showPopulerBeritaList("beritasaya"); break;
                     case "Tambah Berita" : closeLayouts();
-                        beritaAddProgressbar.setVisibility(View.GONE);
-                        beritaAddImageimageView.setVisibility(View.GONE);
-                        fileUpload = null;
-                        imageAction = "";
-
-                        ((EditText) findViewById(R.id.beritaaddJudulBerita)).setText("");
-                        ((EditText) findViewById(R.id.beritaaddDeskripsi)).setText("");
-                        ((TextView) findViewById(R.id.idberitaedit)).setText("");
-                        beritAddHapusGambar.setVisibility(View.GONE);
-                        setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
+                        tambahBeritaPrepare();
                         break;
                     case "Log Out" :
                         editor.clear();
                         editor.commit();
                         confMenu();
+                        showPopulerBeritaList("populer");
+                        setTitle("Populer");
                         break;
                     case "Log In" :
                         ((EditText) findViewById(R.id.loginusernamenik)).setText("");
@@ -657,7 +749,7 @@ public class MainActivity extends AppCompatActivity {
             beritaAddProgressbar.setVisibility(View.VISIBLE);
             judulBerita = ((EditText) findViewById(R.id.beritaaddJudulBerita)).getText().toString();
             deskripsi = ((EditText) findViewById(R.id.beritaaddDeskripsi)).getText().toString();
-            kategori = ((Spinner) findViewById(R.id.beritaaddSpinner)).getSelectedItem().toString();
+            kategori = beritaAddSpinner.getSelectedItem().toString();
             idBerita = ((TextView) findViewById(R.id.idberitaedit)).getText().toString();
         }
 
@@ -745,7 +837,6 @@ public class MainActivity extends AppCompatActivity {
                 if(resultCode == RESULT_OK){
                     Bitmap selectedImage = (Bitmap) imageReturnedIntent.getExtras().get("data");
                     profileImage.setImageBitmap(selectedImage);
-                    profileImage.setVisibility(View.VISIBLE);
                     setFileUploadCamera(selectedImage);
                 }
                 break;
@@ -821,15 +912,33 @@ public class MainActivity extends AppCompatActivity {
         URL myurl = null;
         try {
             if (beritaShow.isEmpty() || beritaShow.equals("populer")) {
-                myurl = new URL(PropertiesData.domain.concat("android/populer"));
+                if (sharedPreferences.getString("usernamenik", "").equals("")) {
+                    myurl = new URL(PropertiesData.domain.concat("android/populer"));
+                } else {
+                    myurl = new URL(PropertiesData.domain.concat("android/populer").concat("?usernamenik=")
+                            .concat(sharedPreferences.getString("usernamenik", ""))
+                            .concat("&password=").concat(sharedPreferences.getString("password", "")));
+                }
             } else if (beritaShow.equals("terbaru")) {
-                myurl = new URL(PropertiesData.domain.concat("android/terbaru"));
+                if (sharedPreferences.getString("usernamenik", "").equals("")) {
+                    myurl = new URL(PropertiesData.domain.concat("android/terbaru"));
+                } else {
+                    myurl = new URL(PropertiesData.domain.concat("android/terbaru").concat("?usernamenik=")
+                            .concat(sharedPreferences.getString("usernamenik", ""))
+                            .concat("&password=").concat(sharedPreferences.getString("password", "")));
+                }
             } else if (beritaShow.equals("beritasaya")) {
                 myurl = new URL(PropertiesData.domain.concat("android/beritasaya").concat("?usernamenik=")
                         .concat(sharedPreferences.getString("usernamenik", ""))
                         .concat("&password=").concat(sharedPreferences.getString("password", "")));
             } else {
-                myurl = new URL(PropertiesData.domain.concat("android/artikel-").concat(beritaShow));
+                if (sharedPreferences.getString("usernamenik", "").equals("")) {
+                    myurl = new URL(PropertiesData.domain.concat("android/artikel-").concat(beritaShow));
+                } else {
+                    myurl = new URL(PropertiesData.domain.concat("android/artikel-").concat(beritaShow).concat("?usernamenik=")
+                            .concat(sharedPreferences.getString("usernamenik", ""))
+                            .concat("&password=").concat(sharedPreferences.getString("password", "")));
+                }
             }
             URLConnection dc = myurl.openConnection();
             inputStream = new BufferedReader(new InputStreamReader(
@@ -883,12 +992,17 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 populerListView.setAdapter(_listImageText);
             }
+
+            if (!sharedPreferences.getString("usernamenik", "").equals("")) {
+                populerTambahBeritaButton.setVisibility(View.VISIBLE);
+            }
         }
 
         @Override
         protected void onPreExecute() {
             populerProgressBar.setVisibility(View.VISIBLE);
             populerListView.setVisibility(View.GONE);
+            populerTambahBeritaButton.setVisibility(View.GONE);
         }
 
         @Override
@@ -943,9 +1057,8 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(String result) {
-            JSONObject jsonObject = null;
             try {
-                jsonObject = new JSONObject(resultPostHTml);
+                JSONObject jsonObject = new JSONObject(resultPostHTml);
                 if (jsonObject.getString("success").equals("1")) {
                     Toast.makeText(MainActivity.this, "User Tersimpan",
                             Toast.LENGTH_SHORT).show();
@@ -1021,6 +1134,7 @@ public class MainActivity extends AppCompatActivity {
             if (resultPostHTml.equals("1")) {
                 setViewLayout((View) findViewById(R.id.userlogin), View.GONE);
                 setViewLayout((View) findViewById(R.id.populer), View.VISIBLE);
+                mainActivity.setTitle("Populer");
 
                 editor.putString("usernamenik", usernamenik);
                 editor.putString("password", password);
@@ -1294,6 +1408,27 @@ public class MainActivity extends AppCompatActivity {
             LayoutInflater inflater = mainActivity.getLayoutInflater();
             View rowView = inflater.inflate(R.layout.listkomentar, null, true);
 
+            ((TextView) rowView.findViewById(R.id.profileNameKomen)).setText(komentarText.getName());
+            ImageView profileUserImage = (ImageView) rowView.findViewById(R.id.profileUserImage);
+            if (komentarText.getUsersgambar().isEmpty()) {
+                profileUserImage.setVisibility(View.GONE);
+            } else {
+                Glide.with(profileUserImage.getContext())
+                        .load(komentarText.getUsersgambar())
+                        .listener(new RequestListener<String, GlideDrawable>() {
+                            @Override
+                            public boolean onException(Exception e, String model, Target<GlideDrawable> target, boolean isFirstResource) {
+                                return false;
+                            }
+
+                            @Override
+                            public boolean onResourceReady(GlideDrawable resource, String model, Target<GlideDrawable> target, boolean isFromMemoryCache, boolean isFirstResource) {
+                                return false;
+                            }
+                        })
+                        .into(profileUserImage);
+            }
+
             ((TextView) rowView.findViewById(R.id.komentar)).setText(komentarText.getKomentar());
             ImageView imageView = (ImageView) rowView.findViewById(R.id.imagekomentar);
             ((TextView) rowView.findViewById(R.id.komentarid)).setText(komentarText.getId());
@@ -1319,6 +1454,8 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 imageView.setVisibility(View.GONE);
             }
+
+            ((TextView) rowView.findViewById(R.id.komentar)).setText(komentarText.getKomentar());
 
             if (komentarText.getIsAccess().equals("1")) {
                 rowView.findViewById(R.id.ralatlayout).setVisibility(View.VISIBLE);
@@ -1548,14 +1685,12 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(String result) {
             setKomentar(komentarTexts);
-            beritaDetailProgressBar.setVisibility(View.GONE);
             ((ScrollView) findViewById(R.id.beritadetail)).requestChildFocus(findViewById(R.id.beritadetaillastcomponent),
                     findViewById(R.id.beritadetaillastcomponent));
         }
 
         @Override
         protected void onPreExecute() {
-            beritaDetailProgressBar.setVisibility(View.VISIBLE);
             _id = ((EditText) findViewById(R.id.beritadetailidberita)).getText().toString();
         }
 
@@ -1574,7 +1709,10 @@ public class MainActivity extends AppCompatActivity {
                         jsonObjectKomentar.get("id").toString(),
                         jsonObjectKomentar.get("useridinput").toString(),
                         jsonObjectKomentar.get("idberita").toString(),
-                        jsonObjectKomentar.get("isaccess").toString()));
+                        jsonObjectKomentar.get("isaccess").toString(),
+                        jsonObjectKomentar.get("name").toString(),
+                        jsonObjectKomentar.get("usersgambar").toString()
+                        ));
             } catch (JSONException e) {
                 Log.e(e.getLocalizedMessage(), e.getMessage());
             }
@@ -1647,7 +1785,13 @@ public class MainActivity extends AppCompatActivity {
             BufferedReader inputStream = null;
             URL myurl = null;
             try {
-                myurl = new URL(PropertiesData.domain.concat("android/beritadetail-").concat(_id));
+                if (sharedPreferences.getString("usernamenik", "").equals("")) {
+                    myurl = new URL(PropertiesData.domain.concat("android/beritadetail-").concat(_id));
+                } else {
+                    myurl = new URL(PropertiesData.domain.concat("android/beritadetail-").concat(_id)
+                            .concat("?usernamenik=").concat(sharedPreferences.getString("usernamenik", ""))
+                            .concat("&password=").concat(sharedPreferences.getString("password", "")));
+                }
                 URLConnection dc = myurl.openConnection();
                 inputStream = new BufferedReader(new InputStreamReader(
                         dc.getInputStream()));
@@ -1677,11 +1821,10 @@ public class MainActivity extends AppCompatActivity {
             ((EditText) findViewById(R.id.beritaaddJudulBerita)).setText(imageText.getJudul());
             ((EditText) findViewById(R.id.beritaaddDeskripsi)).setText(imageText.getBerita());
             ((TextView) findViewById(R.id.idberitaedit)).setText(imageText.getId());
-            Spinner spinner = (Spinner)findViewById(R.id.beritaaddSpinner);
             int position = 0;
-            while (position < spinner.getAdapter().getCount()) {
-                if (spinner.getAdapter().getItem(position).toString().equalsIgnoreCase(imageText.getKategori())) {
-                    spinner.setSelection(position);
+            while (position < beritaAddSpinner.getAdapter().getCount()) {
+                if (beritaAddSpinner.getAdapter().getItem(position).toString().equalsIgnoreCase(imageText.getKategori())) {
+                    beritaAddSpinner.setSelection(position);
                     break;
                 }
                 position++;
@@ -1700,11 +1843,13 @@ public class MainActivity extends AppCompatActivity {
 
                             @Override
                             public boolean onResourceReady(GlideDrawable resource, String model, Target<GlideDrawable> target, boolean isFromMemoryCache, boolean isFirstResource) {
-                                beritaDetailProgressBar.setVisibility(View.GONE);
+                                beritaAddProgressbar.setVisibility(View.GONE);
                                 return false;
                             }
                         })
                         .into(beritaAddImageimageView);
+            } else {
+                beritaAddProgressbar.setVisibility(View.GONE);
             }
         }
 
@@ -1712,13 +1857,15 @@ public class MainActivity extends AppCompatActivity {
         protected void onPreExecute() {
             closeLayouts();
             imageAction = "";
-            beritaAddProgressbar.setVisibility(View.GONE);
+            beritaAddProgressbar.setVisibility(View.VISIBLE);
+            setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
+
             beritaAddImageimageView.setVisibility(View.GONE);
             beritAddHapusGambar.setVisibility(View.GONE);
             ((TextView) findViewById(R.id.idberitaedit)).setText("");
             fileUpload = null;
             imageAction = "";
-            setViewLayout((View) findViewById(R.id.beritaadd), View.VISIBLE);
+
         }
 
         @Override
@@ -1966,7 +2113,6 @@ public class MainActivity extends AppCompatActivity {
             HttpPost httpPost = new HttpPost(PropertiesData.domain.concat("android/komentar-add"));
 
             List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
-            Log.i("dddd", idKomentar);
             nameValuePairs.add(new BasicNameValuePair("idkomentar", idKomentar));
             nameValuePairs.add(new BasicNameValuePair("komentar", komentar));
             nameValuePairs.add(new BasicNameValuePair("imageaction", imageAction));
@@ -2022,7 +2168,6 @@ public class MainActivity extends AppCompatActivity {
                 inputStream = new BufferedReader(new InputStreamReader(
                         dc.getInputStream()));
                 jsonObject = new JSONObject(inputStream.readLine());
-                Log.i("d", jsonObject.get("name").toString());
             } catch (MalformedURLException e) {
                 Log.e(e.getLocalizedMessage(), e.getMessage());
             } catch (IOException e) {
@@ -2074,16 +2219,275 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPreExecute() {
-            profileImage.setImageBitmap(BitmapFactory.decodeResource(getResources(),
-                    R.drawable.ic_person_blue_24dp));
             ((EditText) findViewById(R.id.profileNama)).setText("");
             ((EditText) findViewById(R.id.profileNik)).setText("");
             ((EditText) findViewById(R.id.profileEmail)).setText("");
+            ((EditText) findViewById(R.id.profilePassword)).setText("");
+            ((EditText) findViewById(R.id.profileRePassword)).setText("");
             profileProgressBar.setVisibility(View.VISIBLE);
         }
 
         @Override
         protected void onProgressUpdate(Void... values) {
         }
+    }
+
+    private class EditMyProfile extends AsyncTask<String, Void, String> {
+        String name;
+        String nik;
+        String email;
+        @Override
+        protected String doInBackground(String... params) {
+            String fileNameForUpload = "";
+            if (fileUpload != null ) {
+                String extension = "";
+                int i = fileUpload.getName().lastIndexOf('.');
+                if (i > 0) {
+                    extension = fileUpload.getName().substring(i + 1);
+                    if (extension.length() > 0) {
+                        BufferedReader inputStream = null;
+                        URL myurl = null;
+                        FTPClient con = null;
+                        FileInputStream in = null;
+
+                        try {
+
+                            myurl = new URL(PropertiesData.domain.concat("android/getfilename-").concat(extension)
+                                    .concat("?usernamenik=").concat(sharedPreferences.getString("usernamenik", ""))
+                                    .concat("&password=").concat(sharedPreferences.getString("password", "")));
+                            URLConnection dc = myurl.openConnection();
+                            inputStream = new BufferedReader(new InputStreamReader(
+                                    dc.getInputStream()));
+                            fileNameForUpload = inputStream.readLine();
+                            if (fileNameForUpload.length() > 0) {
+                                Bitmap bitmapImage = BitmapFactory.decodeFile(fileUpload.getAbsolutePath());
+                                int height = bitmapImage.getHeight();
+                                int width = bitmapImage.getWidth();
+                                if (width > 277) {
+                                    height = 277 * height / width;
+                                    width = 277;
+                                }
+                                Bitmap bitmapReady = Bitmap.createScaledBitmap(bitmapImage, width, height, true);
+                                File sd = Environment.getExternalStorageDirectory();
+                                File dest = new File(sd, fileNameForUpload);
+
+                                FileOutputStream out = null;
+                                try {
+                                    out = new FileOutputStream(dest);
+                                    bitmapReady.compress(Bitmap.CompressFormat.JPEG, 90, out);
+                                    out.flush();
+                                    out.close();
+
+                                    fileUpload = dest;
+                                    con = new FTPClient();
+                                    con.connect(PropertiesData.ftpdomain);
+                                    if (con.login(PropertiesData.ftpusername, PropertiesData.ftppassword)) {
+                                        con.enterLocalPassiveMode(); // important!
+                                        con.setFileType(FTP.BINARY_FILE_TYPE);
+                                        in = new FileInputStream(fileUpload);
+                                        con.storeFile(fileUpload.getName(), in);
+                                        con.logout();
+                                    }
+                                    dest.delete();
+                                    out = null;
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                } finally {
+                                    if (out != null) {
+                                        out.close();
+                                    }
+                                    if (con != null) {
+                                        con.disconnect();
+                                    }
+                                    if (in != null) {
+                                        in.close();
+                                    }
+                                }
+                            }
+
+                        } catch (MalformedURLException e) {
+                            Log.e(e.getLocalizedMessage(), e.getMessage());
+                        } catch (IOException e) {
+                            Log.e(e.getLocalizedMessage(), e.getMessage());
+                        } finally {
+                            if (inputStream != null) {
+                                try {
+                                    inputStream.close();
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            HttpClient httpclient = new DefaultHttpClient();
+            HttpPost httpPost = new HttpPost(PropertiesData.domain.concat("android/profileuseredit"));
+
+            List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+            nameValuePairs.add(new BasicNameValuePair("name", name));
+            nameValuePairs.add(new BasicNameValuePair("nik", nik));
+            nameValuePairs.add(new BasicNameValuePair("email", email));
+            nameValuePairs.add(new BasicNameValuePair("gambar", fileNameForUpload));
+            nameValuePairs.add(new BasicNameValuePair("usernamenik", sharedPreferences.getString("usernamenik", "")));
+            nameValuePairs.add(new BasicNameValuePair("password", sharedPreferences.getString("password", "")));
+
+            try {
+                httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+                HttpResponse response = httpclient.execute(httpPost);
+                viewhtmlPost(response);
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            } catch (ClientProtocolException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            profileProgressBar.setVisibility(View.GONE);
+        }
+
+        @Override
+        protected void onPreExecute() {
+            name = ((EditText) findViewById(R.id.profileNama)).getText().toString();
+            nik = ((EditText) findViewById(R.id.profileNik)).getText().toString();
+            email = ((EditText) findViewById(R.id.profileEmail)).getText().toString();
+            profileProgressBar.setVisibility(View.VISIBLE);
+        }
+
+        @Override
+        protected void onProgressUpdate(Void... values) {
+        }
+    }
+
+    private class GantiPasswordProfileProfile extends AsyncTask<String, Void, String> {
+        String password;
+        @Override
+        protected String doInBackground(String... params) {
+            String fileNameForUpload = "";
+            HttpClient httpclient = new DefaultHttpClient();
+            HttpPost httpPost = new HttpPost(PropertiesData.domain.concat("android/profilegantipassword"));
+
+            List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+            nameValuePairs.add(new BasicNameValuePair("passwordchange", password));
+            nameValuePairs.add(new BasicNameValuePair("usernamenik", sharedPreferences.getString("usernamenik", "")));
+            nameValuePairs.add(new BasicNameValuePair("password", sharedPreferences.getString("password", "")));
+
+            try {
+                httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+                HttpResponse response = httpclient.execute(httpPost);
+                viewhtmlPost(response);
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            } catch (ClientProtocolException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            findViewById(R.id.profileGantiPasswordProgressBar).setVisibility(View.GONE);
+        }
+
+        @Override
+        protected void onPreExecute() {
+            password = ((EditText) findViewById(R.id.profilePassword)).getText().toString();
+            findViewById(R.id.profileGantiPasswordProgressBar).setVisibility(View.VISIBLE);
+        }
+
+        @Override
+        protected void onProgressUpdate(Void... values) {
+        }
+    }
+
+    private class PostLokasi extends AsyncTask<String, Void, String> {
+        String langitude;
+        String longitude;
+        Location location;
+
+        public PostLokasi(Location location1) {
+            location = location1;
+        }
+        @Override
+        protected String doInBackground(String... params) {
+            String fileNameForUpload = "";
+            HttpClient httpclient = new DefaultHttpClient();
+            HttpPost httpPost = new HttpPost(PropertiesData.domain.concat("android/lokasiadd"));
+
+            List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+            nameValuePairs.add(new BasicNameValuePair("langitude", langitude));
+            nameValuePairs.add(new BasicNameValuePair("longitude", longitude));
+            nameValuePairs.add(new BasicNameValuePair("usernamenik", sharedPreferences.getString("usernamenik", "")));
+            nameValuePairs.add(new BasicNameValuePair("password", sharedPreferences.getString("password", "")));
+
+            try {
+                httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+                HttpResponse response = httpclient.execute(httpPost);
+                viewhtmlPost(response);
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            } catch (ClientProtocolException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+
+        }
+
+        @Override
+        protected void onPreExecute() {
+            langitude = String.valueOf(location.getLatitude());
+            longitude = String.valueOf(location.getLongitude());
+        }
+
+        @Override
+        protected void onProgressUpdate(Void... values) {
+        }
+    }
+
+    private void setLokasi() {
+        Location location = null;
+        locationManager.requestLocationUpdates(
+                LocationManager.NETWORK_PROVIDER,
+                MIN_TIME_BW_UPDATES,
+                MIN_DISTANCE_CHANGE_FOR_UPDATES, (LocationListener) this);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        }
+        if (location == null) {
+            locationManager.requestLocationUpdates(
+                    LocationManager.GPS_PROVIDER,
+                    MIN_TIME_BW_UPDATES,
+                    MIN_DISTANCE_CHANGE_FOR_UPDATES, (LocationListener) this);
+            location = locationManager
+                    .getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        }
+        if (location != null) {
+            new PostLokasi(location).execute();
+        }
+    }
+    private class MyTimerTask extends TimerTask {
+        @Override
+        public void run() {
+            runOnUiThread(new Runnable(){
+                @Override
+                public void run() {
+                    setLokasi();
+                }});
+        }
+
     }
 }

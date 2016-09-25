@@ -39,7 +39,7 @@
 
             <de.hdodenhof.circleimageview.CircleImageView
                 xmlns:app="http://schemas.android.com/apk/res-auto"
-                android:id="@+id/profileImage"
+                android:id="@+id/profileUserImage"
                 android:layout_width="match_parent"
                 android:layout_height="150dp"
                 android:src="@drawable/ic_person_blue_24dp"
@@ -53,7 +53,7 @@
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_below="@+id/profileImage"
+                android:layout_below="@+id/profileUserImage"
                 android:id="@+id/profilekameragaleri"
                 android:layout_marginBottom="10dp">
 
@@ -123,7 +123,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Simpan"
-                android:id="@+id/button"
+                android:id="@+id/profileEditButton"
                 android:layout_below="@+id/profileEmail"
                 android:background="#93b978" />
 
@@ -189,11 +189,19 @@
             <Button
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Ganti PAssword"
-                android:id="@+id/profileGantiPAsswordButton"
+                android:text="Ganti Password"
+                android:id="@+id/profileGantiPasswordButton"
                 android:layout_below="@+id/profileRePassword"
                 android:background="@color/level_2"
                 android:textStyle="bold" />
+
+            <ProgressBar
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/profileGantiPasswordProgressBar"
+                android:layout_below="@+id/textView9"
+                android:layout_centerHorizontal="true"
+                android:visibility="gone" />
         </RelativeLayout>
 
     </LinearLayout>
